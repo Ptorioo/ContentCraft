@@ -25,8 +25,8 @@ function App() {
     setIsSidebarOpen(false); // Close sidebar on mobile after selection
   };
 
-  const handleSendMessage = (content: string) => {
-    addMessage(content, true);
+  const handleSendMessage = (content: string, file?: File) => {
+    addMessage(content, true, file);
   };
 
   const handleNewConversation = () => {

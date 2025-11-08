@@ -1,19 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Send, Paperclip } from 'lucide-react';
 
 interface MessageInputProps {
-  onSendMessage: (content: string) => void;
+  onSendMessage: (content: string, file?: File) => void;
   disabled?: boolean;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, disabled = false }) => {
   const [input, setInput] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim() && !disabled) {
-      onSendMessage(input.trim());
+      onSendMessage(input.trim(), selectedFile || undefined);
       setInput('');
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -52,9 +72,31 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, disabled = f
         )}
 */}        
         <form onSubmit={handleSubmit} className="relative">
+          {selectedFile && (
+            <div className="mb-2 flex items-center gap-2 text-sm text-gray-700 bg-gray-100 rounded-lg px-3 py-2">
+              <Paperclip size={14} />
+              <span className="flex-1 truncate">{selectedFile.name}</span>
+              <button
+                type="button"
+                onClick={handleRemoveFile}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
           <div className="flex items-end space-x-3 bg-white rounded-xl border border-gray-300 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500">
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileSelect}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.txt"
+            />
             <button
               type="button"
+              onClick={() => fileInputRef.current?.click()}
               className="p-3 hover:bg-gray-50 rounded-lg transition-colors"
               disabled={disabled}
             >
