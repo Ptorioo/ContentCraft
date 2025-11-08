@@ -71,7 +71,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Sample Prompts */}
+{/*
         <div className="p-4 border-b border-gray-200">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">Get Started</h3>
           <div className="space-y-2">
@@ -96,7 +96,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             ))}
           </div>
         </div>
-
+*/}
         {/* Conversation History */}
         <div className="flex-1 overflow-y-auto p-4">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">Recent</h3>

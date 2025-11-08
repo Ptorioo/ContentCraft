@@ -18,10 +18,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({ messages, conversationTitle }) => {
           Rise Above Average
         </h2>
         <p className="text-lg text-gray-600 mb-8 max-w-2xl">
-          Transform your resume, self-introduction, and professional content to stand out from the crowd. 
-          Get personalized suggestions that make you memorable.
+          Analyze your content by calculating ATI score.
         </p>
-        
+{/*        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl w-full">
           <div className="bg-white rounded-xl border border-gray-200 p-6 hover:border-purple-300 hover:shadow-md transition-all duration-200">
             <div className="text-purple-600 mb-3">📄</div>
@@ -55,6 +54,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({ messages, conversationTitle }) => {
             </p>
           </div>
         </div>
+*/}
       </div>
     );
   }

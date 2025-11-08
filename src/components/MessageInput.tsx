@@ -34,7 +34,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, disabled = f
   return (
     <div className="border-t border-gray-200 bg-white">
       <div className="max-w-4xl mx-auto p-4">
-        {input === '' && (
+{/*        {input === '' && (
           <div className="mb-4">
             <p className="text-sm text-gray-500 mb-3">Try these suggestions:</p>
             <div className="flex flex-wrap gap-2">
@@ -50,7 +50,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, disabled = f
             </div>
           </div>
         )}
-        
+*/}        
         <form onSubmit={handleSubmit} className="relative">
           <div className="flex items-end space-x-3 bg-white rounded-xl border border-gray-300 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500">
             <button
