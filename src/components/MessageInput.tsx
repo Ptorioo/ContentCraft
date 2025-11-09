@@ -92,7 +92,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, disabled = f
               type="file"
               onChange={handleFileSelect}
               className="hidden"
-              accept=".pdf,.doc,.docx,.txt"
+              accept=".png, .jpg, .jpeg, .svg"
             />
             <button
               type="button"

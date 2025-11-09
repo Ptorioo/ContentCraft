@@ -1,8 +1,7 @@
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const API_URL = import.meta.env.VITE_API_BASE;
 
 export const analyzeContent = async (content: string, file?: File): Promise<string> => {
-  const apiUrl = `${SUPABASE_URL}/functions/v1/analyze-content`;
+  const apiUrl = `${API_URL}/api/analyze`;
 
   const formData = new FormData();
   formData.append('content', content);
@@ -10,13 +9,8 @@ export const analyzeContent = async (content: string, file?: File): Promise<stri
     formData.append('file', file);
   }
 
-  const headers = {
-    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-  };
-
   const response = await fetch(apiUrl, {
     method: 'POST',
-    headers,
     body: formData,
   });
 
