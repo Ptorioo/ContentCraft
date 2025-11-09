@@ -1,0 +1,8 @@
+numpy
+pandas
+joblib
+easyocr
+Pillow
+torch
+transformers
+scikit-learn
