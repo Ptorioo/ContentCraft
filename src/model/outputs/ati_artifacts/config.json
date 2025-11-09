@@ -1,0 +1,35 @@
+{
+  "MODEL_BACKEND": "chinese-clip",
+  "MODEL_ID_CN": "OFA-Sys/chinese-clip-vit-base-patch16",
+  "MODEL_ID_EN": "openai/clip-vit-base-patch32",
+  "PROJ_DIM": 512,
+  "K_CLUSTERS": 6,
+  "TAU": 0.07,
+  "IMG_MAX_IMAGES": 1,
+  "OCR_MAX_IMAGES": 1,
+  "phase1": {
+    "text": {
+      "wN": 0.5,
+      "wD": 0.5,
+      "nov_min": 1.0,
+      "nov_max": 1.0
+    },
+    "image": {
+      "wN": 1.0,
+      "wD": 0.0,
+      "nov_min": 0.10824596881866455,
+      "nov_max": 0.422831654548645
+    },
+    "meta": {
+      "wN": 1.0,
+      "wD": 0.0,
+      "nov_min": 0.0064771175384521484,
+      "nov_max": 0.9237920641899109
+    }
+  },
+  "phase2_v": [
+    0.0,
+    1.0,
+    0.0
+  ]
+}
