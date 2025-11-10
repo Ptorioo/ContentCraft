@@ -4,9 +4,16 @@ import { Sparkles, Menu } from 'lucide-react';
 interface HeaderProps {
   onToggleSidebar: () => void;
   isSidebarOpen: boolean;
+  activeView: 'chat' | 'analytics';
+  onChangeView: (view: 'chat' | 'analytics') => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }) => {
+const Header: React.FC<HeaderProps> = ({
+  onToggleSidebar,
+  isSidebarOpen,
+  activeView,
+  onChangeView
+}) => {
   return (
     <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between lg:justify-center relative">
       <button
@@ -26,6 +33,27 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }) => {
         </h1>
       </div>
       
+      <nav className="hidden lg:flex items-center space-x-4 absolute right-6">
+        <button
+          onClick={() => onChangeView('chat')}
+          className={`
+            text-sm font-medium px-3 py-2 rounded-lg transition-colors
+            ${activeView === 'chat' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'}
+          `}
+        >
+          對話介面
+        </button>
+        <button
+          onClick={() => onChangeView('analytics')}
+          className={`
+            text-sm font-medium px-3 py-2 rounded-lg transition-colors
+            ${activeView === 'analytics' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'}
+          `}
+        >
+          分析儀表板
+        </button>
+      </nav>
+
       <div className="w-8 lg:hidden" /> {/* Spacer for mobile */}
     </header>
   );
