@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Conversation, Message } from '../types';
 import { sampleConversations } from '../data/sampleConversations';
 import { analyzeContent } from '../services/contentService';
+import { AnalyzeResult } from '../services/contentService';
 
 export const useConversations = () => {
   const [conversations, setConversations] = useState<Conversation[]>(sampleConversations);
@@ -57,12 +58,13 @@ export const useConversations = () => {
     if (isUser) {
       setIsLoading(true);
       try {
-        const aiResponse = await analyzeContent(content, file);
+        const aiResult: AnalyzeResult = await analyzeContent(content, file);
         const aiMsg: Message = {
           id: Math.random().toString(36).substr(2, 9),
-          content: aiResponse,
+          content: aiResult.text,
           isUser: false,
-          timestamp: new Date()
+          timestamp: new Date(),
+          analyticsData: aiResult.analytics,
         };
         setConversations(prev => prev.map(conv => {
           if (conv.id === convId) {
