@@ -30,6 +30,13 @@ const Message: React.FC<MessageProps> = ({ message }) => {
           <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
             {message.content}
           </div>
+          {message.attachment && message.attachment.type?.startsWith('image/') && (
+            <img
+              src={message.attachment.url}
+              alt={message.attachment.name}
+              className="mt-3 max-w-full rounded-lg border object-contain max-h-80"
+            />
+          )}
         </div>
         <div className="text-xs text-gray-500 mt-2">
           {message.timestamp.toLocaleTimeString()}

@@ -139,7 +139,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, disabled = f
         </form>
         
         <p className="text-xs text-gray-500 text-center mt-3">
-          ContentCraft can help improve your professional content. Always review suggestions before using.
+          ATI Agent can help improve your professional content. Always review suggestions before using.
         </p>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { analyzeContent } from '../services/contentService';
 export const useConversations = () => {
   const [conversations, setConversations] = useState<Conversation[]>(sampleConversations);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>('1');
+  const [isLoading, setIsLoading] = useState(false);
 
   const currentConversation = conversations.find(c => c.id === currentConversationId);
 
@@ -16,7 +17,6 @@ export const useConversations = () => {
       messages: [],
       lastUpdated: new Date()
     };
-    
     setConversations(prev => [newConversation, ...prev]);
     setCurrentConversationId(newConversation.id);
   };
@@ -24,22 +24,30 @@ export const useConversations = () => {
   const addMessage = async (content: string, isUser: boolean, file?: File) => {
     if (!currentConversationId) return;
 
+    const convId = currentConversationId;
+
+    const attachment = file
+      ? { name: file.name, url: URL.createObjectURL(file), type: file.type }
+      : undefined;
+
     const newMessage: Message = {
       id: Math.random().toString(36).substr(2, 9),
       content,
       isUser,
-      timestamp: new Date()
+      timestamp: new Date(),
+      attachment
     };
 
     setConversations(prev => prev.map(conv => {
-      if (conv.id === currentConversationId) {
+      if (conv.id === convId) {
         const updatedMessages = [...conv.messages, newMessage];
         return {
           ...conv,
           messages: updatedMessages,
-          title: conv.title === 'New conversation' && isUser ?
-            content.slice(0, 50) + (content.length > 50 ? '...' : '') :
-            conv.title,
+          title:
+            conv.title === 'New conversation' && isUser
+              ? content.slice(0, 50) + (content.length > 50 ? '...' : '')
+              : conv.title,
           lastUpdated: new Date()
         };
       }
@@ -47,11 +55,44 @@ export const useConversations = () => {
     }));
 
     if (isUser) {
+      setIsLoading(true);
       try {
         const aiResponse = await analyzeContent(content, file);
-        addMessage(aiResponse, false);
-      } catch (error) {
-        addMessage('Sorry, there was an error processing your request. Please try again.', false);
+        const aiMsg: Message = {
+          id: Math.random().toString(36).substr(2, 9),
+          content: aiResponse,
+          isUser: false,
+          timestamp: new Date()
+        };
+        setConversations(prev => prev.map(conv => {
+          if (conv.id === convId) {
+            return {
+              ...conv,
+              messages: [...conv.messages, aiMsg],
+              lastUpdated: new Date()
+            };
+          }
+          return conv;
+        }));
+      } catch {
+        const errMsg: Message = {
+          id: Math.random().toString(36).substr(2, 9),
+          content: 'Error processing request.',
+          isUser: false,
+          timestamp: new Date()
+        };
+        setConversations(prev => prev.map(conv => {
+          if (conv.id === convId) {
+            return {
+              ...conv,
+              messages: [...conv.messages, errMsg],
+              lastUpdated: new Date()
+            };
+          }
+          return conv;
+        }));
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -62,6 +103,7 @@ export const useConversations = () => {
     currentConversationId,
     createNewConversation,
     setCurrentConversationId,
-    addMessage
+    addMessage,
+    isLoading
   };
 };

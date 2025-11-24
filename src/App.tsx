@@ -13,16 +13,15 @@ function App() {
     currentConversationId,
     createNewConversation,
     setCurrentConversationId,
-    addMessage
+    addMessage,
+    isLoading,
   } = useConversations();
 
-  const handleToggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
+  const handleToggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const handleSelectConversation = (id: string) => {
     setCurrentConversationId(id);
-    setIsSidebarOpen(false); // Close sidebar on mobile after selection
+    setIsSidebarOpen(false);
   };
 
   const handleSendMessage = (content: string, file?: File) => {
@@ -31,16 +30,13 @@ function App() {
 
   const handleNewConversation = () => {
     createNewConversation();
-    setIsSidebarOpen(false); // Close sidebar on mobile after creation
+    setIsSidebarOpen(false);
   };
 
   return (
     <div className="h-screen flex flex-col bg-white">
-      <Header 
-        onToggleSidebar={handleToggleSidebar}
-        isSidebarOpen={isSidebarOpen}
-      />
-      
+      <Header onToggleSidebar={handleToggleSidebar} isSidebarOpen={isSidebarOpen} />
+
       <div className="flex-1 flex overflow-hidden">
         <Sidebar
           conversations={conversations}
@@ -50,14 +46,16 @@ function App() {
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
         />
-        
+
         <main className="flex-1 flex flex-col min-w-0">
-          <ChatArea 
+          <ChatArea
             messages={currentConversation?.messages || []}
             conversationTitle={currentConversation?.title}
+            isLoading={isLoading}
           />
-          <MessageInput 
+          <MessageInput
             onSendMessage={handleSendMessage}
+            disabled={isLoading}
           />
         </main>
       </div>

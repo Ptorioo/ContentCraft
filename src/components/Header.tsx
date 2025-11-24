@@ -22,7 +22,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }) => {
           <Sparkles size={18} className="text-white" />
         </div>
         <h1 className="text-xl font-semibold text-gray-900">
-          ContentCraft
+          ATI Agent
         </h1>
       </div>
       

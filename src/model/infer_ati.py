@@ -43,17 +43,32 @@ def _softmax_rows(x, tau):
     e = np.exp(z); return e / (e.sum(axis=1, keepdims=True) + 1e-9)
 
 def compute_DS_for_modality(X, centers, wN, wD, nov_min, nov_max, tau):
-    Xn = _norm_rows(X); sims = Xn @ centers.T
-    max_sim = sims.max(axis=1)
+    """
+    Return per-sample:
+      nov: normalized novelty in [0,1]
+      div: normalized diversity (entropy-based) in [0,1]
+      DS : Distinctiveness Score = wN * nov + wD * div
+    """
+    # cosine sims to centers
+    Xn = _norm_rows(X)
+    sims = Xn @ centers.T                     # [n, k]
+    max_sim = sims.max(axis=1)                # [n]
+
+    # novelty (same scaling as training)
     nov_raw = 1.0 - max_sim
     if nov_max - nov_min < 1e-9:
         nov = np.zeros_like(nov_raw, dtype=np.float32)
     else:
         nov = ((nov_raw - nov_min) / (nov_max - nov_min)).astype(np.float32)
         nov = np.clip(nov, 0.0, 1.0)
-    probs = _softmax_rows(sims, tau=tau)
-    ent = -(probs * (np.log(probs + 1e-9))).sum(axis=1) / (math.log(sims.shape[1]) + 1e-9)
-    return (wN * nov + wD * ent).astype(np.float32)
+
+    # diversity = normalized entropy of softmax(sim / tau)
+    probs = _softmax_rows(sims, tau=tau)      # [n, k]
+    ent = -(probs * (np.log(probs + 1e-9))).sum(axis=1)
+    div = (ent / (math.log(sims.shape[1]) + 1e-9)).astype(np.float32)
+
+    DS = (wN * nov + wD * div).astype(np.float32)
+    return nov.astype(np.float32), div, DS
 
 def parse_rel_img_paths(cell):
     if pd.isna(cell): return []
@@ -238,17 +253,57 @@ def compute_ati_for_df(df: pd.DataFrame) -> pd.DataFrame:
         columns=numeric_df.columns, index=df.index
     ).values.astype(np.float32)
 
-    DS_text  = compute_DS_for_modality(text_vec,  centers["text"],  cfg["phase1"]["text"]["wN"],  cfg["phase1"]["text"]["wD"],  cfg["phase1"]["text"]["nov_min"],  cfg["phase1"]["text"]["nov_max"],  TAU)
-    DS_image = compute_DS_for_modality(image_vec, centers["image"], cfg["phase1"]["image"]["wN"], cfg["phase1"]["image"]["wD"], cfg["phase1"]["image"]["nov_min"], cfg["phase1"]["image"]["nov_max"], TAU)
-    DS_meta  = compute_DS_for_modality(numeric_z, centers["meta"],  cfg["phase1"]["meta"]["wN"],  cfg["phase1"]["meta"]["wD"],  cfg["phase1"]["meta"]["nov_min"],  cfg["phase1"]["meta"]["nov_max"],  TAU)
+    nov_text,  div_text,  DS_text  = compute_DS_for_modality(
+        text_vec,
+        centers["text"],
+        cfg["phase1"]["text"]["wN"],
+        cfg["phase1"]["text"]["wD"],
+        cfg["phase1"]["text"]["nov_min"],
+        cfg["phase1"]["text"]["nov_max"],
+        TAU,
+    )
+
+    nov_image, div_image, DS_image = compute_DS_for_modality(
+        image_vec,
+        centers["image"],
+        cfg["phase1"]["image"]["wN"],
+        cfg["phase1"]["image"]["wD"],
+        cfg["phase1"]["image"]["nov_min"],
+        cfg["phase1"]["image"]["nov_max"],
+        TAU,
+    )
+
+    nov_meta,  div_meta,  DS_meta  = compute_DS_for_modality(
+        numeric_z,
+        centers["meta"],
+        cfg["phase1"]["meta"]["wN"],
+        cfg["phase1"]["meta"]["wD"],
+        cfg["phase1"]["meta"]["nov_min"],
+        cfg["phase1"]["meta"]["nov_max"],
+        TAU,
+    )
 
     DS_final = (v[0]*DS_text + v[1]*DS_image + v[2]*DS_meta).astype(np.float32)
     ATI = 100.0*(1.0 - DS_final)
 
     out = df[["brand","sum","rel_img_paths","ftime_parsed"]].copy()
-    out["DS_text"]=DS_text; out["DS_image"]=DS_image; out["DS_meta"]=DS_meta
-    out["DS_final"]=DS_final; out["ATI_final"]=ATI
-    out["ocr_text"]=ocr_texts
+
+    # per-modality novelty & diversity
+    out["text_nov"]  = nov_text
+    out["text_div"]  = div_text
+    out["image_nov"] = nov_image
+    out["image_div"] = div_image
+    out["meta_nov"]  = nov_meta
+    out["meta_div"]  = div_meta
+
+    # DS & ATI
+    out["DS_text"]   = DS_text
+    out["DS_image"]  = DS_image
+    out["DS_meta"]   = DS_meta
+    out["DS_final"]  = DS_final
+    out["ATI_final"] = ATI
+
+    out["ocr_text"]  = ocr_texts
     return out
 
 def compute_ati_single(text: str, rel_img_paths: str | None = None) -> dict:
@@ -269,6 +324,16 @@ def compute_ati_single(text: str, rel_img_paths: str | None = None) -> dict:
             "DS_image": float(row["DS_image"]),
             "DS_meta":  float(row["DS_meta"]),
             "DS_final": float(row["DS_final"]),
+        },
+        "novelty": {
+            "text":  float(row["text_nov"]),
+            "image": float(row["image_nov"]),
+            "meta":  float(row["meta_nov"]),
+        },
+        "diversity": {
+            "text":  float(row["text_div"]),
+            "image": float(row["image_div"]),
+            "meta":  float(row["meta_div"]),
         },
         "ocr_text": row["ocr_text"],
         "rel_img_paths": rel_img_paths or "",
