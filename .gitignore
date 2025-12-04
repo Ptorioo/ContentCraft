@@ -23,6 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.prettierrc
+*.jpg
+*.png
+*.jpeg
+*.gif
 
 .vercel
 cache/

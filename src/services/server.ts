@@ -25,7 +25,7 @@ function runPython(args: string[]): Promise<any> {
       cwd: ROOT,
       env: {
         ...process.env,
-        PYTHONIOENCODING: "utf-8",   // << force UTF-8 output
+        PYTHONIOENCODING: "utf-8", // << force UTF-8 output
       },
     });
 
@@ -59,7 +59,6 @@ function runPython(args: string[]): Promise<any> {
     });
   });
 }
-
 
 // POST /api/analyze  (FormData or JSON)
 app.post("/api/analyze", upload.single("file"), async (req, res) => {
@@ -95,7 +94,9 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
         relImg = String(imageRelPath);
       }
       if (!text && !relImg) {
-        return res.status(400).json({ error: "content or imageRelPath required" });
+        return res
+          .status(400)
+          .json({ error: "content or imageRelPath required" });
       }
     }
 
@@ -105,8 +106,12 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     }
 
     const result = await runPython(args);
-    // result is whatever infer_ati.py printed (ati, components, etc.)
-    return res.json(result);
+    const responseData = {
+      ati: result.ati,
+      novelty: result.novelty,
+      diversity: result.diversity,
+    };
+    return res.json(responseData);
   } catch (err: any) {
     console.error("analyze error:", err);
     return res
