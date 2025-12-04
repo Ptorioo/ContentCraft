@@ -1,0 +1,21 @@
+{
+  "text": {
+    "ati": 21.58,
+    "novelty": 0.4278,
+    "diversity": 0.8789,
+    "engagementWeight": 0.4806
+  },
+  "image": {
+    "ati": 63.14,
+    "novelty": 0.3686,
+    "diversity": 0.8746,
+    "engagementWeight": 0.2309
+  },
+  "metadata": {
+    "ati": 86.26,
+    "novelty": 0.4694,
+    "diversity": 0.1374,
+    "engagementWeight": 0.2885
+  },
+  "combinedAti": 42.06
+}

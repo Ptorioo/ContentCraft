@@ -1,10 +1,33 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AnalyticsDataset,
   BrandRiskMetric,
   TailOutlierPost,
 } from '../types/analytics';
-import { ArrowLeft, TrendingUp, AlertTriangle, Sparkles } from 'lucide-react';
+import { ArrowLeft, TrendingUp, AlertTriangle, Sparkles, BarChart3, Map } from 'lucide-react';
+import BrandDashboard from './BrandDashboard';
+import MarketMap from './MarketMap';
+import { formatBrandName } from '../utils/brandNames';
+import {
+  ResponsiveContainer,
+  ScatterChart,
+  LineChart,
+  BarChart,
+  PieChart,
+  Pie,
+  Cell,
+  Bar,
+  ComposedChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  ZAxis,
+  Tooltip,
+  Scatter,
+  TooltipProps,
+  Legend,
+} from 'recharts';
 
 interface AnalyticsDashboardProps {
   data: AnalyticsDataset;
@@ -41,7 +64,7 @@ const RiskTable: React.FC<{
         <tbody className="divide-y divide-gray-100">
           {rows.map((row) => (
             <tr key={row.brandId} className="hover:bg-gray-50">
-              <td className="py-3 font-medium text-gray-900">{row.brandName}</td>
+              <td className="py-3 font-medium text-gray-900">{formatBrandName(row.brandName)}</td>
               <td className="py-3 text-right text-gray-700">{row.ati.toFixed(1)}</td>
               <td className="py-3 text-right text-gray-700">{row.novelty.toFixed(2)}</td>
               <td className="py-3 text-right text-gray-700">{row.diversity.toFixed(2)}</td>
@@ -59,52 +82,198 @@ const RiskTable: React.FC<{
 
 const OutlierList: React.FC<{ posts: TailOutlierPost[] }> = ({ posts }) => (
   <div className="grid gap-4 md:grid-cols-2">
-    {posts.map((post) => (
-      <div
-        key={post.postId}
-        className="bg-white border border-gray-200 rounded-xl p-4 flex gap-4 shadow-sm"
-      >
-        <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+    {posts.map((post, index) => {
+      // 確保所有數值都存在且有效
+      const engagementRate = post.engagementRate ?? 0;
+      const ati = post.ati ?? 0;
+      const novelty = post.novelty ?? 0;
+      const diversity = post.diversity ?? 0;
+      const likeCount = post.likeCount ?? 0;
+      const commentCount = post.commentCount ?? 0;
+      const followerCount = post.followerCount ?? 0;
+      
+      return (
+        <div
+          key={post.postId || `post-${index}`}
+          className="bg-white border border-gray-200 rounded-xl p-4 flex gap-4 shadow-sm hover:shadow-md transition-shadow"
+        >
+          <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center relative flex-shrink-0">
           {post.imageUrl ? (
             <img
               src={post.imageUrl}
-              alt={post.brandName}
+                alt={post.brandName || 'Post'}
               className="w-full h-full object-cover"
             />
           ) : (
             <Sparkles className="text-purple-500" size={24} />
           )}
+            {index < 3 && (
+              <div className="absolute top-1 left-1 bg-purple-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {index + 1}
         </div>
-        <div className="flex-1 space-y-1">
-          <p className="text-sm font-semibold text-gray-900">{post.brandName}</p>
-          <p className="text-xs text-gray-500">{post.date}</p>
-          <p className="text-sm text-gray-700 line-clamp-2">{post.captionSnippet}</p>
+            )}
+          </div>
+          <div className="flex-1 space-y-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-semibold text-gray-900 truncate">{formatBrandName(post.brandName || '未知品牌')}</p>
+              {engagementRate > 0 && (
+                <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded flex-shrink-0">
+                  互動率 {engagementRate.toFixed(2)}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500">{post.date || '日期未知'}</p>
+            <p className="text-sm text-gray-700 line-clamp-2 break-words">{post.captionSnippet || '無描述'}</p>
           <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-            <span>ATI {post.ati.toFixed(1)}</span>
-            <span>Novelty {post.novelty.toFixed(2)}</span>
-            <span>Diversity {post.diversity.toFixed(2)}</span>
-            <span>❤️ {post.likeCount}</span>
-            <span>💬 {post.commentCount}</span>
+              <span className="font-medium">ATI {ati.toFixed(1)}</span>
+              <span>Novelty {novelty.toFixed(2)}</span>
+              <span>Diversity {diversity.toFixed(2)}</span>
+              <span>❤️ {likeCount.toLocaleString()}</span>
+              <span>💬 {commentCount.toLocaleString()}</span>
+              {followerCount > 0 && (
+                <span className="text-gray-400">👥 {(followerCount / 1000).toFixed(0)}k</span>
+              )}
           </div>
         </div>
       </div>
-    ))}
+      );
+    })}
   </div>
 );
 
 const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToChat }) => {
+  const [activeTab, setActiveTab] = useState<'brand' | 'market' | 'overview'>('overview');
   const [selectedCase, setSelectedCase] = useState(data.caseStudies[0]?.brandId ?? '');
   const activeCase = data.caseStudies.find((c) => c.brandId === selectedCase) ?? data.caseStudies[0];
   const [selectedScenarioIdx, setSelectedScenarioIdx] = useState(0);
+  const [marketTrend, setMarketTrend] = useState<Array<{date: string; avgAti: number; avgNovelty: number; avgDiversity: number}>>([]);
+  const [correlationData, setCorrelationData] = useState<any>(null);
+  const [decilesData, setDecilesData] = useState<any[]>([]);
+  const [loadingTrend, setLoadingTrend] = useState(false);
+  const [loadingCorrelation, setLoadingCorrelation] = useState(false);
+  const [loadingDeciles, setLoadingDeciles] = useState(false);
+  const [hoveredScatterIndex, setHoveredScatterIndex] = useState<number | null>(null);
+  const [tailOutliers, setTailOutliers] = useState<TailOutlierPost[]>([]);
+  const [loadingTailOutliers, setLoadingTailOutliers] = useState(false);
+  
+  const scatterPreview = data.noveltyDiversityScatter.slice(0, 6);
+  const scatterData = useMemo(
+    () =>
+      data.noveltyDiversityScatter.map((item, index) => ({
+        ...item,
+        followerCountK: item.followerCount / 1000,
+        index, // 添加索引以便追蹤
+      })),
+    [data.noveltyDiversityScatter]
+  );
+
+  // 載入市場趨勢數據
+  React.useEffect(() => {
+    if (activeTab === 'overview') {
+      setLoadingTrend(true);
+      fetch('http://localhost:8787/api/market/trend')
+        .then(res => res.json())
+        .then(result => {
+          setMarketTrend(result.trend || []);
+          setLoadingTrend(false);
+        })
+        .catch(err => {
+          console.error('Failed to load market trend:', err);
+          setLoadingTrend(false);
+        });
+    }
+  }, [activeTab]);
+
+  // 載入相關性數據
+  React.useEffect(() => {
+    if (activeTab === 'overview') {
+      setLoadingCorrelation(true);
+      fetch('http://localhost:8787/api/market/correlation')
+        .then(res => res.json())
+        .then(result => {
+          setCorrelationData(result);
+          setLoadingCorrelation(false);
+        })
+        .catch(err => {
+          console.error('Failed to load correlation:', err);
+          setLoadingCorrelation(false);
+        });
+    }
+  }, [activeTab]);
+
+  // 載入分箱數據
+  React.useEffect(() => {
+    if (activeTab === 'overview') {
+      setLoadingDeciles(true);
+      fetch('http://localhost:8787/api/market/deciles')
+        .then(res => res.json())
+        .then(result => {
+          setDecilesData(result.deciles || []);
+          setLoadingDeciles(false);
+        })
+        .catch(err => {
+          console.error('Failed to load deciles:', err);
+          setLoadingDeciles(false);
+        });
+    }
+  }, [activeTab]);
+
+
+  // 載入長尾貼文數據
+  React.useEffect(() => {
+    if (activeTab === 'overview') {
+      setLoadingTailOutliers(true);
+      fetch('http://localhost:8787/api/market/tail-outliers?limit=6')
+        .then(res => res.json())
+        .then(result => {
+          setTailOutliers(result.outliers || []);
+          setLoadingTailOutliers(false);
+        })
+        .catch(err => {
+          console.error('Failed to load tail outliers:', err);
+          setLoadingTailOutliers(false);
+        });
+    }
+  }, [activeTab]);
+
+
+  // 自定義 Tooltip 組件，用於處理 hover 狀態
+  const ScatterTooltip = React.useCallback(({ active, payload }: TooltipProps<number, string>) => {
+    React.useEffect(() => {
+      if (!active || !payload || payload.length === 0) {
+        setHoveredScatterIndex(null);
+      } else {
+        const point = payload[0].payload as BrandRiskMetric & { followerCountK: number; index?: number };
+        if (point.index !== undefined) {
+          setHoveredScatterIndex(point.index);
+        }
+      }
+    }, [active, payload]);
+    
+    if (!active || !payload || payload.length === 0) {
+      return null;
+    }
+    const point = payload[0].payload as BrandRiskMetric & { followerCountK: number; index?: number };
+    return (
+      <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-md text-sm text-gray-700">
+        <p className="font-semibold text-gray-900">{formatBrandName(point.brandName)}</p>
+        <p>ATI {point.ati.toFixed(1)}</p>
+        <p>Novelty {point.novelty.toFixed(2)}</p>
+        <p>Diversity {point.diversity.toFixed(2)}</p>
+        <p>貼文數 {point.postCount}</p>
+        <p>追蹤數 {(point.followerCount / 1000).toFixed(1)}k</p>
+      </div>
+    );
+  }, []);
 
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50">
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">ATI 分析儀表板</h2>
+            <h2 className="text-2xl font-bold text-gray-900">IG 內容同質化分析平台</h2>
             <p className="text-sm text-gray-500">
-              觀察 2025/04 – 2025/09 之間 56 個茶飲品牌的 Instagram 多模態趨勢
+              量化你的貼文與市場的相似度，找出最像你的競品
             </p>
           </div>
           <button
@@ -116,6 +285,58 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
           </button>
         </div>
 
+        {/* Tab 切換 */}
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab('brand')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'brand'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <BarChart3 size={18} />
+                <span>品牌儀表板</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('market')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'market'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Map size={18} />
+                <span>市場地圖</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'overview'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <BarChart3 size={18} />
+                <span>總覽分析</span>
+              </div>
+            </button>
+          </nav>
+        </div>
+
+        {/* Tab 內容 */}
+        {activeTab === 'brand' && <BrandDashboard />}
+        {activeTab === 'market' && <MarketMap />}
+
+        {/* 總覽分析 Tab - 顯示原本的內容 */}
+        {activeTab === 'overview' && (
+        <>
         <section>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
@@ -139,7 +360,12 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
               <p className="text-3xl font-bold text-rose-600 mt-2">
                 {data.summary.highRiskBrandCount}
               </p>
-              <p className="text-sm text-gray-500 mt-1">ATI ≧ 70 的品牌數量</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {data.summary.highRiskDefinition ?? 'ATI 排名前 10%'}
+                {data.summary.highRiskThreshold != null && (
+                  <span>（閾值 ≧ {data.summary.highRiskThreshold!.toFixed(1)}）</span>
+                )}
+              </p>
             </div>
           </div>
         </section>
@@ -150,23 +376,87 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
               <h3 className="text-lg font-semibold text-gray-900">ATI 時間序列</h3>
               <TrendingUp className="text-purple-500" size={20} />
             </div>
-            <div className="space-y-3 text-sm">
-              {data.atiTrend.map((point) => (
-                <div
-                  key={point.date}
-                  className="flex items-center justify-between border-b border-gray-100 pb-2 last:border-0 last:pb-0"
-                >
-                  <span className="text-gray-500">{point.date}</span>
-                  <div className="flex items-center gap-4 text-gray-700">
-                    <span>ATI {point.avgAti.toFixed(1)}</span>
-                    <span>Novelty {point.avgNovelty.toFixed(2)}</span>
-                    <span>Diversity {point.avgDiversity.toFixed(2)}</span>
+            {loadingTrend ? (
+              <div className="h-64 flex items-center justify-center text-gray-500">
+                載入中...
                   </div>
+            ) : marketTrend.length > 0 ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={marketTrend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#6b7280"
+                      style={{ fontSize: '12px' }}
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      stroke="#AE9FD0"
+                      style={{ fontSize: '12px' }}
+                      label={{ value: 'ATI', angle: -90, position: 'insideLeft', style: { fill: '#AE9FD0' } }}
+                      domain={[0, 100]}
+                    />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      stroke="#6b7280"
+                      style={{ fontSize: '12px' }}
+                      label={{ value: 'Novelty / Diversity', angle: 90, position: 'insideRight', style: { fill: '#6b7280' } }}
+                      domain={[0, 1]}
+                    />
+                    <Tooltip 
+                      formatter={(value: number, name: string) => {
+                        if (name === 'avgAti') return [`${value.toFixed(1)}`, 'ATI'];
+                        if (name === 'avgNovelty') return [`${value.toFixed(3)}`, 'Novelty'];
+                        if (name === 'avgDiversity') return [`${value.toFixed(3)}`, 'Diversity'];
+                        return [value, name];
+                      }}
+                      labelStyle={{ color: '#374151', fontWeight: 'bold' }}
+                      contentStyle={{ 
+                        backgroundColor: '#fff', 
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Legend />
+                    <Line 
+                      yAxisId="left"
+                      type="monotone" 
+                      dataKey="avgAti" 
+                      stroke="#AE9FD0" 
+                      strokeWidth={2}
+                      dot={{ fill: '#AE9FD0', r: 4 }}
+                      name="ATI"
+                    />
+                    <Line 
+                      yAxisId="right"
+                      type="monotone" 
+                      dataKey="avgNovelty" 
+                      stroke="#e9c7c6" 
+                      strokeWidth={2}
+                      dot={{ fill: '#e9c7c6', r: 4 }}
+                      name="Novelty"
+                    />
+                    <Line 
+                      yAxisId="right"
+                      type="monotone" 
+                      dataKey="avgDiversity" 
+                      stroke="#9fc3d0" 
+                      strokeWidth={2}
+                      dot={{ fill: '#9fc3d0', r: 4 }}
+                      name="Diversity"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
                 </div>
-              ))}
+            ) : (
+              <div className="h-64 flex items-center justify-center text-gray-500">
+                無數據可用
             </div>
+            )}
             <p className="mt-4 text-xs text-gray-400">
-              圖表預留區：後續可串接線圖（ATI / Novelty / Diversity）供即時視覺化。
+              * 時間序列按貼文順序分組，模擬 6 個月的趨勢變化
             </p>
           </div>
 
@@ -174,21 +464,68 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Novelty × Diversity 分佈（抽樣）
             </h3>
-            <div className="aspect-[4/3] bg-gray-100 rounded-lg flex items-center justify-center mb-4">
-              <p className="text-sm text-gray-500">
-                圖表預留區：後續串接散佈圖（品牌 x Novelty vs Diversity）。
-              </p>
+            <div className="h-80 w-full mb-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart 
+                  margin={{ top: 16, right: 16, bottom: 32, left: 16 }}
+                  onMouseLeave={() => setHoveredScatterIndex(null)}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    type="number"
+                    dataKey="novelty"
+                    name="Novelty"
+                    domain={[0, 1]}
+                    tickFormatter={(value: number) => value.toFixed(2)}
+                    label={{ value: 'Novelty', position: 'insideBottomRight', offset: -10 }}
+                  />
+                  <YAxis
+                    type="number"
+                    dataKey="diversity"
+                    name="Diversity"
+                    domain={[0, 1]}
+                    tickFormatter={(value: number) => value.toFixed(2)}
+                    label={{ value: 'Diversity', angle: -90, position: 'insideLeft', offset: 10 }}
+                  />
+                  <ZAxis dataKey="ati" range={[10, 60]} />
+                  <Tooltip 
+                    content={ScatterTooltip} 
+                    cursor={{ strokeDasharray: '3 3' }}
+                  />
+                  <Scatter 
+                    data={scatterData} 
+                    fill="#7c3aed"
+                  >
+                    {scatterData.map((_, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill="#7c3aed"
+                        fillOpacity={
+                          hoveredScatterIndex === null 
+                            ? 0.7 
+                            : hoveredScatterIndex === index 
+                              ? 0.9 
+                              : 0.15
+                        }
+                      />
+                    ))}
+                  </Scatter>
+                </ScatterChart>
+              </ResponsiveContainer>
             </div>
             <div className="space-y-2">
-              {data.noveltyDiversityScatter.map((brand) => (
+              {scatterPreview.map((brand) => (
                 <div key={brand.brandId} className="flex justify-between text-sm text-gray-700">
-                  <span className="font-medium text-gray-900">{brand.brandName}</span>
+                  <span className="font-medium text-gray-900">{formatBrandName(brand.brandName)}</span>
                   <span>
                     ATI {brand.ati.toFixed(1)} · N {brand.novelty.toFixed(2)} · D{' '}
                     {brand.diversity.toFixed(2)}
                   </span>
                 </div>
               ))}
+              <p className="text-xs text-gray-400 mt-3">
+                共 {data.noveltyDiversityScatter.length} 個品牌樣本；圖表可使用全部資料點。
+              </p>
             </div>
           </div>
         </section>
@@ -226,12 +563,12 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                     className={`
                       text-sm font-medium px-3 py-2 rounded-lg border
                       ${activeCase.brandId === cs.brandId
-                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                        ? 'border-[#AE9FD0] bg-[#F5F2F7] text-[#7A6B8F]'
                         : 'border-gray-300 text-gray-600 hover:bg-gray-100'
                       }
                     `}
                   >
-                    {cs.brandName}
+                    {formatBrandName(cs.brandName)}
                   </button>
                 ))}
               </div>
@@ -240,7 +577,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{activeCase.brandName}</p>
+                    <p className="text-sm font-semibold text-gray-900">{formatBrandName(activeCase.brandName)}</p>
                     <p className="text-xs text-gray-500">{activeCase.rationale}</p>
                   </div>
                   <span
@@ -288,7 +625,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                       className={`
                         text-sm px-3 py-2 rounded-lg border transition-colors
                         ${index === selectedScenarioIdx
-                          ? 'border-purple-500 bg-purple-50 text-purple-700'
+                          ? 'border-[#AE9FD0] bg-[#F5F2F7] text-[#7A6B8F]'
                           : 'border-gray-300 text-gray-600 hover:bg-gray-100'
                         }
                       `}
@@ -298,27 +635,27 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                   ))}
                 </div>
                 {activeCase.scenarioTests[selectedScenarioIdx] && (
-                  <div className="border border-purple-200 bg-purple-50 rounded-lg p-4 space-y-3 text-sm text-purple-900">
+                  <div className="border border-[#D4C9E0] bg-[#F5F2F7] rounded-lg p-4 space-y-3 text-sm text-[#5A4A6F]">
                     <div className="flex items-center justify-between">
                       <span className="font-semibold">
                         {activeCase.scenarioTests[selectedScenarioIdx].title}
                       </span>
-                      <span className="text-xs font-semibold bg-white text-purple-600 px-2 py-1 rounded-full border border-purple-200">
+                      <span className="text-xs font-semibold bg-white text-[#8B7BA5] px-2 py-1 rounded-full border border-[#D4C9E0]">
                         預測 ATI {activeCase.scenarioTests[selectedScenarioIdx].adjustedAti.toFixed(1)}
                       </span>
                     </div>
-                    <p className="text-purple-800">
+                    <p className="text-[#5A4A6F]">
                       {activeCase.scenarioTests[selectedScenarioIdx].description}
                     </p>
                     <div className="space-y-1">
-                      <p className="text-xs font-semibold uppercase text-purple-700">調整項目</p>
-                      <ul className="list-disc list-inside text-purple-800 space-y-1">
+                      <p className="text-xs font-semibold uppercase text-[#7A6B8F]">調整項目</p>
+                      <ul className="list-disc list-inside text-[#5A4A6F] space-y-1">
                         {activeCase.scenarioTests[selectedScenarioIdx].changes.map((change) => (
                           <li key={change}>{change}</li>
                         ))}
                       </ul>
                     </div>
-                    <p className="text-xs text-purple-600">
+                    <p className="text-xs text-[#8B7BA5]">
                       與原始貼文相比，ATI {activeCase.scenarioTests[selectedScenarioIdx].adjustedAti - activeCase.baseline.ati > 0 ? '上升' : '下降'}{' '}
                       {Math.abs(activeCase.scenarioTests[selectedScenarioIdx].adjustedAti - activeCase.baseline.ati).toFixed(1)} 點。
                     </p>
@@ -331,23 +668,19 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
 
         <section className="grid gap-6 lg:grid-cols-2">
           <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900">晚入場品牌觀察</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              訓練期無貼文、僅在測試期出現的品牌如何影響長尾
-            </p>
-            <div className="space-y-3">
-              {data.lateEntryBrands.map((brand) => (
-                <div key={brand.brandId} className="border border-gray-100 rounded-lg p-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-gray-900">{brand.brandName}</span>
-                    <span className="text-rose-500 font-semibold">ATI {brand.ati.toFixed(1)}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    首貼日期 {brand.firstPostDate} · 平均互動 {brand.avgEngagement.toLocaleString()}
-                  </p>
-                </div>
-              ))}
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">長尾貼文檔案夾</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                顯示互動率分佈右尾的極值貼文（前6名）。這些貼文雖然數量少，但互動表現異常突出，值得特別關注。
+              </p>
             </div>
+            {loadingTailOutliers ? (
+              <div className="text-gray-500 text-sm">載入中...</div>
+            ) : tailOutliers.length > 0 ? (
+              <OutlierList posts={tailOutliers.slice(0, 6)} />
+            ) : (
+              <div className="text-gray-500 text-sm">無數據可用</div>
+            )}
           </div>
 
           <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
@@ -355,6 +688,69 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
             <p className="text-sm text-gray-500 mb-4">
               文字、影像、metadata 對整體 ATI 的貢獻與權重估計
             </p>
+            
+            {/* 堆疊柱狀圖顯示各模態的 ATI 貢獻 */}
+            <div className="h-64 mb-6">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[
+                  {
+                    name: '文字',
+                    ATI: data.modalityBreakdown.text.ati,
+                    Novelty: data.modalityBreakdown.text.novelty * 100,
+                    Diversity: data.modalityBreakdown.text.diversity * 100,
+                  },
+                  {
+                    name: '影像',
+                    ATI: data.modalityBreakdown.image.ati,
+                    Novelty: data.modalityBreakdown.image.novelty * 100,
+                    Diversity: data.modalityBreakdown.image.diversity * 100,
+                  },
+                  {
+                    name: 'Metadata',
+                    ATI: data.modalityBreakdown.metadata.ati,
+                    Novelty: data.modalityBreakdown.metadata.novelty * 100,
+                    Diversity: data.modalityBreakdown.metadata.diversity * 100,
+                  },
+                ]}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" stroke="#6b7280" />
+                  <YAxis stroke="#6b7280" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="ATI" fill="#AE9FD0" name="ATI" />
+                  <Bar dataKey="Novelty" fill="#e9c7c6" name="Novelty (×100)" />
+                  <Bar dataKey="Diversity" fill="#9fc3d0" name="Diversity (×100)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* 圓餅圖顯示權重分配 */}
+            <div className="h-64 mb-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: '文字模態', value: data.modalityBreakdown.text.engagementWeight },
+                      { name: '影像模態', value: data.modalityBreakdown.image.engagementWeight },
+                      { name: 'Metadata', value: data.modalityBreakdown.metadata.engagementWeight },
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    <Cell fill="#AE9FD0" />
+                    <Cell fill="#e9c7c6" />
+                    <Cell fill="#9fc3d0" />
+                  </Pie>
+                  <Tooltip formatter={(value: number) => formatPercent(value)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
             <div className="space-y-3 text-sm">
               {(['text', 'image', 'metadata'] as const).map((key) => {
                 const labelMap = {
@@ -386,58 +782,166 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-2">
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900">互動縮放檢查</h3>
-            <p className="text-sm text-gray-500 mb-3">
-              目前留言權重設定為 {data.engagementScaling.commentWeight.toFixed(1)}x
-              ，與 ATI 的相關係數為 {data.engagementScaling.correlationWithAti.toFixed(2)}
-            </p>
-            <p className="text-sm text-gray-600">{data.engagementScaling.note}</p>
-            <div className="mt-4 h-32 bg-gray-100 rounded-lg flex items-center justify-center text-sm text-gray-500">
-              預留圖表：可放不同縮放比對照的箱型圖或殘差圖。
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900">長尾貼文檔案夾</h3>
-            <OutlierList posts={data.tailOutliers} />
-          </div>
-        </section>
-
+        {/* ATI 與互動率相關性分析 */}
         <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">偏態與模型診斷</h3>
-          <div className="grid gap-4 md:grid-cols-3">
-            {data.distributionDiagnostics.map((diag) => (
-              <div key={diag.chartTitle} className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="p-4">
-                  <p className="text-sm font-semibold text-gray-900">{diag.chartTitle}</p>
-                  <p className="text-xs uppercase text-gray-400 mt-1">{diag.diagnosticType}</p>
-                  <p className="text-sm text-gray-600 mt-2">{diag.description}</p>
-                </div>
-                <div className="bg-gray-100 h-32 flex items-center justify-center">
-                  {diag.placeholderImageUrl ? (
-                    <img
-                      src={diag.placeholderImageUrl}
-                      alt={diag.chartTitle}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xs text-gray-500">圖表待補</span>
-                  )}
-                </div>
-                <div className="p-4 border-t border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500 mb-2">關鍵觀察</p>
-                  <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
-                    {diag.keyTakeaways.map((takeaway) => (
-                      <li key={takeaway}>{takeaway}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ))}
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">ATI 與互動率相關性分析</h3>
+          {loadingCorrelation ? (
+            <div className="h-96 flex items-center justify-center text-gray-500">
+              載入中...
+            </div>
+          ) : correlationData ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="bg-[#F5F2F7] border border-[#D4C9E0] rounded-lg p-4">
+                  <p className="text-sm text-[#7A6B8F] font-medium">Spearman 相關係數</p>
+                  <p className="text-2xl font-bold text-[#5A4A6F] mt-1">
+                    {correlationData.correlation.toFixed(3)}
+                  </p>
+            </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-700 font-medium">Pearson 相關係數</p>
+                  <p className="text-2xl font-bold text-blue-900 mt-1">
+                    {correlationData.pearsonCorrelation?.toFixed(3) || 'N/A'}
+                  </p>
           </div>
+          </div>
+              <div className="h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ScatterChart data={correlationData.dataPoints}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis 
+                      type="number"
+                      dataKey="ati" 
+                      name="ATI"
+                      label={{ value: 'ATI', position: 'insideBottom', offset: -5 }}
+                      stroke="#6b7280"
+                    />
+                    <YAxis 
+                      type="number"
+                      dataKey="engagement" 
+                      name="互動率"
+                      label={{ value: '互動率', angle: -90, position: 'insideLeft' }}
+                      stroke="#6b7280"
+                    />
+                    <Tooltip 
+                      formatter={(value: number, name: string) => {
+                        if (name === 'ati') return [`${value.toFixed(1)}`, 'ATI'];
+                        if (name === 'engagement') return [`${value.toFixed(4)}`, '互動率'];
+                        return [value, name];
+                      }}
+                    />
+                    <Legend />
+                    <Scatter 
+                      dataKey="engagement" 
+                      fill="#AE9FD0" 
+                      fillOpacity={0.6}
+                      name="貼文"
+                    />
+                  </ScatterChart>
+                </ResponsiveContainer>
+                {/* 手動繪製迴歸線 */}
+                {correlationData.regressionLine && correlationData.regressionLine.length === 2 && (
+                  <div className="mt-2 text-xs text-gray-600 text-center">
+                    <p>迴歸線: y = {correlationData.slope.toFixed(4)}x + {correlationData.intercept.toFixed(4)}</p>
+                    <p className="text-gray-500 mt-1">
+                      (從 ({correlationData.regressionLine[0].ati.toFixed(1)}, {correlationData.regressionLine[0].engagement.toFixed(4)}) 
+                      到 ({correlationData.regressionLine[1].ati.toFixed(1)}, {correlationData.regressionLine[1].engagement.toFixed(4)}))
+                    </p>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                迴歸線公式: y = {correlationData.slope.toFixed(4)}x + {correlationData.intercept.toFixed(4)}
+              </p>
+            </div>
+          ) : (
+            <div className="h-96 flex items-center justify-center text-gray-500">
+              無數據可用
+            </div>
+          )}
         </section>
+
+        {/* 分箱（Decile）分析 */}
+        <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">分箱（Decile）分析</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            將貼文依 ATI 分成 10 等分，檢視每個分箱的平均互動率
+          </p>
+          {loadingDeciles ? (
+            <div className="h-96 flex items-center justify-center text-gray-500">
+              載入中...
+                </div>
+          ) : decilesData.length > 0 ? (
+            <div className="space-y-4">
+              <div className="h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={decilesData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis 
+                      dataKey="decile" 
+                      label={{ value: '分箱（Decile）', position: 'insideBottom', offset: -5 }}
+                      stroke="#6b7280"
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      label={{ value: '平均互動率', angle: -90, position: 'insideLeft' }}
+                      stroke="#6b7280"
+                    />
+                    <YAxis 
+                      yAxisId="right" 
+                      orientation="right"
+                      label={{ value: '平均 ATI', angle: 90, position: 'insideRight' }}
+                      stroke="#6b7280"
+                    />
+                    <Tooltip 
+                      formatter={(value: number, name: string) => {
+                        if (name === 'engagementMean') return [`${value.toFixed(4)}`, '平均互動率'];
+                        if (name === 'atiMean') return [`${value.toFixed(1)}`, '平均 ATI'];
+                        return [value, name];
+                      }}
+                    />
+                    <Legend />
+                    <Bar 
+                      yAxisId="left"
+                      dataKey="engagementMean" 
+                      fill="#AE9FD0" 
+                      fillOpacity={0.7}
+                      name="平均互動率"
+                    />
+                    <Line 
+                      yAxisId="right"
+                      type="monotone" 
+                      dataKey="atiMean" 
+                      stroke="#AE9FD0" 
+                      strokeWidth={2}
+                      dot={{ fill: '#AE9FD0', r: 4 }}
+                      name="平均 ATI"
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                {decilesData.map((decile) => (
+                  <div key={decile.decile} className="border border-gray-200 rounded p-2">
+                    <p className="font-semibold text-gray-900">第 {decile.decile} 箱</p>
+                    <p className="text-gray-600 mt-1">ATI: {decile.atiMean.toFixed(1)}</p>
+                    <p className="text-gray-600">互動: {decile.engagementMean.toFixed(4)}</p>
+                    <p className="text-gray-500 text-xs mt-1">{decile.postCount} 篇</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="h-96 flex items-center justify-center text-gray-500">
+              無數據可用
+            </div>
+          )}
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-2">
+        </section>
+        </>
+        )}
       </div>
     </div>
   );

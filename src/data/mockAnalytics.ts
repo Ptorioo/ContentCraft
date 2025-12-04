@@ -1,118 +1,39 @@
-import { AnalyticsDataset } from '../types/analytics';
+import summaryJson from './generated/summary.json';
+import noveltyDiversityScatterJson from './generated/novelty_diversity_scatter.json';
+import brandRankingsJson from './generated/brand_rankings.json';
+import modalityBreakdownJson from './generated/modality_breakdown.json';
+import {
+  AnalyticsDataset,
+  AnalyticsSummary,
+  BrandRiskMetric,
+} from '../types/analytics';
+import caseStudiesJson from './generated/case_studies.json';
+
+const computedSummary: AnalyticsSummary = {
+  timeframeLabel: summaryJson.timeframeLabel,
+  totalBrands: summaryJson.totalBrands,
+  totalPosts: summaryJson.totalPosts,
+  avgAti: summaryJson.avgAti,
+  highRiskBrandCount: summaryJson.highRiskBrandCount,
+  highRiskThreshold: summaryJson.highRiskThreshold,
+  highRiskDefinition: summaryJson.highRiskDefinition,
+  lastUpdated: summaryJson.lastUpdated,
+};
+
+const computedNoveltyDiversityScatter = noveltyDiversityScatterJson as BrandRiskMetric[];
+const computedBrandRankings = brandRankingsJson as {
+  highRiskBrands: BrandRiskMetric[];
+  resilientBrands: BrandRiskMetric[];
+};
+const computedModalityBreakdown = modalityBreakdownJson as AnalyticsDataset['modalityBreakdown'];
+const computedCaseStudies = caseStudiesJson as AnalyticsDataset['caseStudies'];
 
 export const mockAnalytics: AnalyticsDataset = {
-  summary: {
-    timeframeLabel: '2025/04 – 2025/09',
-    totalBrands: 56,
-    totalPosts: 2777,
-    avgAti: 62.4,
-    highRiskBrandCount: 12,
-    lastUpdated: '2025-10-12T09:30:00Z',
-  },
-  atiTrend: [
-    { date: '2025-04-01', avgAti: 58.1, avgNovelty: 0.41, avgDiversity: 0.36 },
-    { date: '2025-05-01', avgAti: 59.8, avgNovelty: 0.38, avgDiversity: 0.34 },
-    { date: '2025-06-01', avgAti: 61.2, avgNovelty: 0.35, avgDiversity: 0.33 },
-    { date: '2025-07-01', avgAti: 63.0, avgNovelty: 0.32, avgDiversity: 0.31 },
-    { date: '2025-08-01', avgAti: 64.7, avgNovelty: 0.29, avgDiversity: 0.28 },
-    { date: '2025-09-01', avgAti: 66.4, avgNovelty: 0.27, avgDiversity: 0.26 },
-  ],
-  noveltyDiversityScatter: [
-    {
-      brandId: 'b001',
-      brandName: '青嵐手搖',
-      ati: 74.2,
-      novelty: 0.21,
-      diversity: 0.24,
-      postCount: 62,
-      followerCount: 184000,
-      samplePostId: 'p-qa-04',
-    },
-    {
-      brandId: 'b014',
-      brandName: '逐鹿茶屋',
-      ati: 51.3,
-      novelty: 0.49,
-      diversity: 0.47,
-      postCount: 38,
-      followerCount: 62000,
-      samplePostId: 'p-ql-18',
-    },
-    {
-      brandId: 'b023',
-      brandName: '晴日紅茶',
-      ati: 68.9,
-      novelty: 0.28,
-      diversity: 0.29,
-      postCount: 54,
-      followerCount: 134500,
-      samplePostId: 'p-qd-11',
-    },
-  ],
-  topHighRiskBrands: [
-    {
-      brandId: 'b001',
-      brandName: '青嵐手搖',
-      ati: 74.2,
-      novelty: 0.21,
-      diversity: 0.24,
-      postCount: 62,
-      followerCount: 184000,
-      samplePostId: 'p-qa-04',
-    },
-    {
-      brandId: 'b017',
-      brandName: '山午奶茶',
-      ati: 72.6,
-      novelty: 0.23,
-      diversity: 0.25,
-      postCount: 41,
-      followerCount: 152300,
-      samplePostId: 'p-sn-07',
-    },
-    {
-      brandId: 'b034',
-      brandName: '與日同茶',
-      ati: 70.4,
-      novelty: 0.26,
-      diversity: 0.27,
-      postCount: 58,
-      followerCount: 99000,
-      samplePostId: 'p-yt-03',
-    },
-  ],
-  resilientBrands: [
-    {
-      brandId: 'b014',
-      brandName: '逐鹿茶屋',
-      ati: 51.3,
-      novelty: 0.49,
-      diversity: 0.47,
-      postCount: 38,
-      followerCount: 62000,
-      samplePostId: 'p-ql-18',
-    },
-    {
-      brandId: 'b007',
-      brandName: '拾光冷萃',
-      ati: 53.1,
-      novelty: 0.45,
-      diversity: 0.44,
-      postCount: 27,
-      followerCount: 38200,
-      samplePostId: 'p-sl-02',
-    },
-    {
-      brandId: 'b021',
-      brandName: '嵐峰冷泡',
-      ati: 54.6,
-      novelty: 0.43,
-      diversity: 0.42,
-      postCount: 33,
-      followerCount: 47800,
-      samplePostId: 'p-lf-09',
-    },
-  ],
+  summary: computedSummary,
+  atiTrend: [],
+  noveltyDiversityScatter: computedNoveltyDiversityScatter,
+  topHighRiskBrands: computedBrandRankings.highRiskBrands,
+  resilientBrands: computedBrandRankings.resilientBrands,
   lateEntryBrands: [
     {
       brandId: 'b048',
@@ -130,25 +51,7 @@ export const mockAnalytics: AnalyticsDataset = {
     },
   ],
   modalityBreakdown: {
-    text: {
-      ati: 63.2,
-      novelty: 0.34,
-      diversity: 0.31,
-      engagementWeight: 0.44,
-    },
-    image: {
-      ati: 65.7,
-      novelty: 0.29,
-      diversity: 0.27,
-      engagementWeight: 0.38,
-    },
-    metadata: {
-      ati: 59.1,
-      novelty: 0.36,
-      diversity: 0.33,
-      engagementWeight: 0.18,
-    },
-    combinedAti: 62.4,
+    ...computedModalityBreakdown,
   },
   engagementScaling: {
     likeWeight: 1,
@@ -156,70 +59,7 @@ export const mockAnalytics: AnalyticsDataset = {
     correlationWithAti: -0.42,
     note: '留言權重估計為 4.8x 時，ATI 與互動表現的相關性最平衡。',
   },
-  caseStudies: [
-    {
-      brandId: 'b001',
-      brandName: '青嵐手搖',
-      trapRanking: 'highest',
-      rationale: '促銷視覺與語句高度重複，模型識別出明顯的平均化訊號。',
-      baseline: {
-        postId: 'p-qa-04',
-        date: '2025-09-08',
-        captionSnippet: '青嵐桂花烏龍買一送一，限時 48 小時內兌換！',
-        imageUrl: 'https://placehold.co/400x400?text=QA',
-        ati: 78.9,
-        novelty: 0.19,
-        diversity: 0.22,
-        likeCount: 1845,
-        commentCount: 62,
-      },
-      scenarioTests: [
-        {
-          title: '換成生活化攝影',
-          description: '以顧客手拿飲品的實景照片取代促銷文宣板。',
-          adjustedAti: 71.4,
-          changes: ['image: lifestyle_shot', 'tone: softer CTA', 'keywords: 在地茶葉、職人萃取'],
-        },
-        {
-          title: '聚焦風味故事',
-          description: '刪除限時優惠語句，改寫為桂花烏龍的香氣描述與產地來源。',
-          adjustedAti: 66.8,
-          changes: ['caption: flavor narrative', 'emoji: 減少促銷符號', 'hashtags: 添加 #職人手炒'],
-        },
-      ],
-    },
-    {
-      brandId: 'b014',
-      brandName: '逐鹿茶屋',
-      trapRanking: 'lowest',
-      rationale: '持續維持高 Novelty 與 Diversity，貼文內容變化多元。',
-      baseline: {
-        postId: 'p-ql-18',
-        date: '2025-07-14',
-        captionSnippet: '逐鹿與在地農合作的梅子青茶，低糖版本今日上市。',
-        imageUrl: 'https://placehold.co/400x400?text=QL',
-        ati: 46.7,
-        novelty: 0.52,
-        diversity: 0.49,
-        likeCount: 326,
-        commentCount: 18,
-      },
-      scenarioTests: [
-        {
-          title: '改成促銷長圖',
-          description: '模擬將視覺改為活動海報並加入限時優惠語句。',
-          adjustedAti: 58.9,
-          changes: ['image: promo_poster', 'caption: 限時優惠 CTA', 'hashtags: #買一送一'],
-        },
-        {
-          title: '保留風味敘事但加上 CTA',
-          description: '維持故事性但在結尾加上一句提醒在門市試飲。',
-          adjustedAti: 48.1,
-          changes: ['caption: flavor narrative + CTA', 'tone: warm invitation'],
-        },
-      ],
-    },
-  ],
+  caseStudies: computedCaseStudies,
   distributionDiagnostics: [
     {
       chartTitle: 'OLS 殘差檢查',

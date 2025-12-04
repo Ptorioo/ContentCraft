@@ -4,6 +4,8 @@ export interface AnalyticsSummary {
   totalPosts: number;
   avgAti: number;
   highRiskBrandCount: number;
+  highRiskThreshold?: number;
+  highRiskDefinition?: string;
   lastUpdated: string;
 }
 
@@ -64,6 +66,7 @@ export interface TailOutlierPost {
   likeCount: number;
   commentCount: number;
   followerCount: number;
+  engagementRate?: number; // 互動率 y
   captionSnippet: string;
   imageUrl?: string;
 }

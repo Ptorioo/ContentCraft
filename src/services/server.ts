@@ -5,6 +5,23 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { spawn } from "child_process";
+import {
+  getAllBrands,
+  getBrandDetails,
+  getSimilarBrands,
+  getMarketStats,
+  getMarketTrend,
+  getATIEngagementCorrelation,
+  getDecileAnalysis,
+  getEngagementScalingCheck,
+  getTailOutlierPosts,
+  getEngagementTailAnalysis,
+  calculateCorrelationForWeight,
+} from './brandAnalysisService.js';
+import {
+  getMarketMapData,
+  getMarketMapStats,
+} from './marketMapService.js';
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -14,7 +31,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 const ROOT = process.cwd();
-const PYTHON = process.env.PYTHON_PATH || "python";
+const PYTHON = process.env.PYTHON_PATH || "python3";
 const MODEL_SCRIPT = path.resolve(ROOT, "src/model/infer_ati.py");
 const IMG_DIR = path.resolve(ROOT, "src/model/input_images");
 
@@ -112,6 +129,163 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     return res
       .status(500)
       .json({ error: "python_error", detail: err?.message ?? String(err) });
+  }
+});
+
+// 品牌分析 API
+
+// GET /api/brands - 取得所有品牌列表
+app.get('/api/brands', async (req, res) => {
+  try {
+    const brands = await getAllBrands();
+    return res.json({ brands });
+  } catch (err: any) {
+    console.error('brands error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/brand/:brandName - 取得品牌詳細資訊
+app.get('/api/brand/:brandName', async (req, res) => {
+  try {
+    const { brandName } = req.params;
+    const details = await getBrandDetails(decodeURIComponent(brandName));
+    if (!details) {
+      return res.status(404).json({ error: 'Brand not found' });
+    }
+    return res.json(details);
+  } catch (err: any) {
+    console.error('brand details error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/brand/:brandName/similar - 取得相似品牌
+app.get('/api/brand/:brandName/similar', async (req, res) => {
+  try {
+    const { brandName } = req.params;
+    const topK = parseInt(req.query.topK as string) || 3;
+    const similar = await getSimilarBrands(decodeURIComponent(brandName), topK);
+    return res.json({ similar });
+  } catch (err: any) {
+    console.error('similar brands error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/market/stats - 取得市場統計
+app.get('/api/market/stats', async (req, res) => {
+  try {
+    const stats = await getMarketStats();
+    return res.json(stats);
+  } catch (err: any) {
+    console.error('market stats error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/market/map - 取得市場地圖數據
+app.get('/api/market/map', async (req, res) => {
+  try {
+    const method = (req.query.method as string) || 'simple';
+    const data = await getMarketMapData(method as 'pca' | 'ati_ds' | 'simple' | 'positioning');
+    return res.json(data);
+  } catch (err: any) {
+    console.error('market map error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/market/map/stats - 取得市場地圖統計
+app.get('/api/market/map/stats', async (req, res) => {
+  try {
+    const stats = await getMarketMapStats();
+    return res.json(stats);
+  } catch (err: any) {
+    console.error('market map stats error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/market/trend - 取得市場整體時間序列趨勢
+app.get('/api/market/trend', async (req, res) => {
+  try {
+    const trend = await getMarketTrend();
+    return res.json({ trend });
+  } catch (err: any) {
+    console.error('market trend error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/market/correlation - 取得 ATI 與互動率相關性分析
+app.get('/api/market/correlation', async (req, res) => {
+  try {
+    const correlation = await getATIEngagementCorrelation();
+    return res.json(correlation);
+  } catch (err: any) {
+    console.error('correlation error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/market/deciles - 取得分箱（Decile）分析數據
+app.get('/api/market/deciles', async (req, res) => {
+  try {
+    const deciles = await getDecileAnalysis();
+    return res.json({ deciles });
+  } catch (err: any) {
+    console.error('deciles error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/market/engagement-scaling - 取得互動縮放檢查數據
+app.get('/api/market/engagement-scaling', async (req, res) => {
+  try {
+    const scaling = await getEngagementScalingCheck();
+    return res.json(scaling);
+  } catch (err: any) {
+    console.error('engagement scaling error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/market/engagement-scaling/calculate - 計算指定權重下的相關性
+app.get('/api/market/engagement-scaling/calculate', async (req, res) => {
+  try {
+    const weight = parseFloat(req.query.weight as string);
+    if (isNaN(weight) || weight < 0 || weight > 20) {
+      return res.status(400).json({ error: 'Invalid weight parameter (0-20)' });
+    }
+    const result = await calculateCorrelationForWeight(weight);
+    return res.json(result);
+  } catch (err: any) {
+    console.error('calculate correlation error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/market/tail-outliers - 取得長尾貼文數據
+app.get('/api/market/tail-outliers', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 10;
+    const outliers = await getTailOutlierPosts(limit);
+    return res.json({ outliers });
+  } catch (err: any) {
+    console.error('tail outliers error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/market/tail-analysis - 取得互動尾部分析數據
+app.get('/api/market/tail-analysis', async (req, res) => {
+  try {
+    const analysis = await getEngagementTailAnalysis();
+    return res.json(analysis);
+  } catch (err: any) {
+    console.error('tail analysis error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
   }
 });
 
