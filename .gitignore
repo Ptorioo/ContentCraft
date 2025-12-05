@@ -29,3 +29,11 @@ cache/
 input_images/
 test/
 train/
+
+# 優化版 CSV 文件（可選，用於快速啟動）
+src/model/outputs/*_optimized.csv
+
+# 臨時分析文件
+*.md
+!README.md
+結果/
