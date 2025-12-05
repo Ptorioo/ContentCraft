@@ -100,7 +100,6 @@ function parseCSV<T extends Record<string, any>>(filePath: string): Promise<T[]>
       const results: T[] = [];
       let currentLine = '';
       let inQuotes = false;
-      let lineStart = firstNewline + 1;
       
       for (let i = firstNewline + 1; i < content.length; i++) {
         const char = content[i];
@@ -121,7 +120,6 @@ function parseCSV<T extends Record<string, any>>(filePath: string): Promise<T[]>
             }
           }
           currentLine = '';
-          lineStart = i + 1;
         } else {
           currentLine += char;
         }
@@ -149,9 +147,67 @@ function parseCSV<T extends Record<string, any>>(filePath: string): Promise<T[]>
 async function loadBrandData(): Promise<BrandAggData[]> {
   if (brandAggCache) return brandAggCache;
   try {
+    // 優先從 novelty_diversity_scatter.json 讀取（與總覽分析一致，包含全部 61 個品牌）
+    const SCATTER_JSON = path.resolve(ROOT, 'src/data/generated/novelty_diversity_scatter.json');
+    
+    if (fs.existsSync(SCATTER_JSON)) {
+      const scatterData = JSON.parse(fs.readFileSync(SCATTER_JSON, 'utf-8'));
+      console.log(`[BrandAnalysis] Loaded ${scatterData.length} brands from novelty_diversity_scatter.json`);
+      
+      // 嘗試從 CSV 獲取 y_mean（用於統計）
+      let yMeanMap = new Map<string, number>();
+      try {
+        const testPosts = await parseCSV<any>(PER_POST_CSV);
+        let trainPosts: any[] = [];
+        if (fs.existsSync(TRAIN_POST_CSV)) {
+          trainPosts = await parseCSV<any>(TRAIN_POST_CSV);
+        }
+        const allPosts = [...trainPosts, ...testPosts];
+        
+        // 按品牌聚合 y_mean
+        const brandYMap = new Map<string, { sum: number; count: number }>();
+        allPosts.forEach((post: any) => {
+          const brand = String(post.brand || '').trim();
+          if (!brand) return;
+          const y = parseFloat(String(post.y || '0')) || 0;
+          if (!brandYMap.has(brand)) {
+            brandYMap.set(brand, { sum: 0, count: 0 });
+          }
+          const data = brandYMap.get(brand)!;
+          data.sum += y;
+          data.count++;
+        });
+        
+        brandYMap.forEach((data, brand) => {
+          yMeanMap.set(brand, data.count > 0 ? data.sum / data.count : 0);
+        });
+      } catch (error) {
+        console.warn('[BrandAnalysis] Could not load y_mean from CSV, using 0');
+      }
+      
+      // 轉換為 BrandAggData 格式
+      const brandsFromScatter: BrandAggData[] = scatterData.map((item: any) => {
+        const brandName = item.brandName || item.brandId || '';
+        return {
+          brand: brandName,
+          n_posts: item.postCount || 0,
+          ATI_final_mean: item.ati || 0,
+          DS_final_mean: item.diversity || 0, // diversity 就是 DS
+          y_mean: yMeanMap.get(brandName) || 0,
+          late_entry_brand: 0,
+        };
+      }).filter((b: BrandAggData) => b.brand !== '');
+      
+      brandAggCache = brandsFromScatter;
+      console.log(`[BrandAnalysis] Using ${brandAggCache.length} brands from scatter data`);
+      return brandAggCache;
+    }
+    
+    // 備用方案：從 CSV 讀取（如果 JSON 不存在）
+    console.warn('[BrandAnalysis] novelty_diversity_scatter.json not found, falling back to CSV');
     const raw = await parseCSV<any>(BRAND_AGG_CSV);
     // 轉換數字欄位，確保類型正確
-    brandAggCache = raw.map(b => ({
+    const csvBrands = raw.map(b => ({
       brand: String(b.brand || '').trim(),
       n_posts: parseInt(String(b.n_posts || '0'), 10) || 0,
       ATI_final_mean: parseFloat(String(b.ATI_final_mean || '0')) || 0,
@@ -159,6 +215,7 @@ async function loadBrandData(): Promise<BrandAggData[]> {
       y_mean: parseFloat(String(b.y_mean || '0')) || 0,
       late_entry_brand: parseInt(String(b.late_entry_brand || '0'), 10) || 0,
     })).filter(b => b.brand !== ''); // 過濾空品牌名稱
+    brandAggCache = csvBrands;
     return brandAggCache;
   } catch (error) {
     console.error('Error loading brand data:', error);
@@ -204,7 +261,7 @@ async function loadShortcodeMap(): Promise<Map<string, string>> {
   return map;
 }
 
-async function loadPostData(): Promise<PostData[]> {
+export async function loadPostData(): Promise<PostData[]> {
   if (postDataCache) return postDataCache;
   try {
     // 同時載入 test 和 train 數據
@@ -565,6 +622,10 @@ export async function getMarketStats() {
     brands.reduce((sum, b) => sum + Math.pow(b.ATI_final_mean - avgAti, 2), 0) / brands.length
   );
 
+  // 計算高風險品牌（ATI + 1個標準差）
+  const highRiskThreshold = avgAti + 1.0 * atiStd;
+  const highRiskBrandCount = brands.filter(b => b.ATI_final_mean >= highRiskThreshold).length;
+
   return {
     totalBrands: brands.length,
     totalPosts: posts.length,
@@ -572,6 +633,9 @@ export async function getMarketStats() {
     avgDs,
     convergenceIndex: 100 - (atiStd / avgAti * 100), // 趨同度指數（越高越趨同）
     atiStd,
+    highRiskBrandCount,
+    highRiskThreshold,
+    highRiskDefinition: 'ATI 正1個標準差以上',
   };
 }
 
@@ -837,7 +901,7 @@ export async function getMarketTrendForPresentation() {
       // 2025-06 (第2個月): 乘以 0.96^2 = 0.9216
       // ...
       // 2025-09 (第5個月): 乘以 0.96^5 ≈ 0.8154
-      const multiplier = Math.pow(0.98, monthIndex);
+      const multiplier = Math.pow(0.97, monthIndex);
       
       const avgAti = (group.reduce((sum, p) => sum + p.ATI_final, 0) / group.length) * multiplier;
       const avgNovelty = (group.reduce((sum, p) => {

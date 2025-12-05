@@ -12,9 +12,6 @@ import {
   ResponsiveContainer,
   ScatterChart,
   LineChart,
-  BarChart,
-  PieChart,
-  Pie,
   Cell,
   Bar,
   ComposedChart,
@@ -34,7 +31,6 @@ interface AnalyticsDashboardProps {
   onBackToChat: () => void;
 }
 
-const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
 const RiskTable: React.FC<{
   title: string;
@@ -96,8 +92,6 @@ const OutlierList: React.FC<{ posts: TailOutlierPost[] }> = ({ posts }) => (
       // 確保所有數值都存在且有效
       const engagementRate = post.engagementRate ?? 0;
       const ati = post.ati ?? 0;
-      const novelty = post.novelty ?? 0;
-      const diversity = post.diversity ?? 0;
       const likeCount = post.likeCount ?? 0;
       const commentCount = post.commentCount ?? 0;
       const followerCount = post.followerCount ?? 0;
@@ -140,8 +134,6 @@ const OutlierList: React.FC<{ posts: TailOutlierPost[] }> = ({ posts }) => (
             <p className="text-sm text-gray-700 line-clamp-2 break-words">{post.captionSnippet || '無描述'}</p>
           <div className="flex flex-wrap gap-2 text-xs text-gray-500">
               <span className="font-medium">ATI {ati.toFixed(1)}</span>
-              <span>Novelty {novelty.toFixed(2)}</span>
-              <span>Diversity {diversity.toFixed(2)}</span>
               <span>❤️ {likeCount.toLocaleString()}</span>
               <span>💬 {commentCount.toLocaleString()}</span>
               {followerCount > 0 && (
@@ -186,6 +178,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
   const [hoveredScatterIndex, setHoveredScatterIndex] = useState<number | null>(null);
   const [tailOutliers, setTailOutliers] = useState<TailOutlierPost[]>([]);
   const [loadingTailOutliers, setLoadingTailOutliers] = useState(false);
+  const [summary, setSummary] = useState(data.summary);
   
   const scatterPreview = data.noveltyDiversityScatter.slice(0, 6);
   const scatterData = useMemo(
@@ -197,6 +190,21 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
       })),
     [data.noveltyDiversityScatter]
   );
+
+  // 載入市場摘要數據（包含高風險品牌）
+  React.useEffect(() => {
+    if (activeTab === 'overview') {
+      fetch('http://localhost:8787/api/market/summary')
+        .then(res => res.json())
+        .then(result => {
+          setSummary(result);
+        })
+        .catch(err => {
+          console.error('Failed to load market summary:', err);
+          // 失敗時使用原始數據
+        });
+    }
+  }, [activeTab]);
 
   // 載入市場趨勢數據
   React.useEffect(() => {
@@ -269,13 +277,14 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
 
 
   // 自定義 Tooltip 組件，用於處理 hover 狀態
-  const ScatterTooltip = React.useCallback(({ active, payload }: TooltipProps<number, string>) => {
+  const ScatterTooltip = React.useCallback((props: TooltipProps<number, string>) => {
+    const { active, payload } = props as any;
     React.useEffect(() => {
       if (!active || !payload || payload.length === 0) {
         setHoveredScatterIndex(null);
       } else {
-        const point = payload[0].payload as BrandRiskMetric & { followerCountK: number; index?: number };
-        if (point.index !== undefined) {
+        const point = payload[0]?.payload as BrandRiskMetric & { followerCountK: number; index?: number };
+        if (point?.index !== undefined) {
           setHoveredScatterIndex(point.index);
         }
       }
@@ -284,7 +293,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
     if (!active || !payload || payload.length === 0) {
       return null;
     }
-    const point = payload[0].payload as BrandRiskMetric & { followerCountK: number; index?: number };
+    const point = payload[0]?.payload as BrandRiskMetric & { followerCountK: number; index?: number };
     return (
       <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-md text-sm text-gray-700">
         <p className="font-semibold text-gray-900">{formatBrandName(point.brandName)}</p>
@@ -373,34 +382,35 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
               <p className="text-xs uppercase font-semibold text-gray-500">平均 ATI</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {data.summary.avgAti.toFixed(1)}
+                {summary.avgAti.toFixed(1)}
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                更新時間 {new Date(data.summary.lastUpdated).toLocaleString()}
+                更新時間 {new Date(summary.lastUpdated).toLocaleString()}
               </p>
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
               <p className="text-xs uppercase font-semibold text-gray-500">監測品牌</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{data.summary.totalBrands}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{summary.totalBrands}</p>
               <p className="text-sm text-gray-500 mt-1">
-                時間範圍 {data.summary.timeframeLabel}，共 {data.summary.totalPosts} 則貼文
+                時間範圍 {summary.timeframeLabel}，共 {summary.totalPosts} 則貼文
               </p>
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
               <p className="text-xs uppercase font-semibold text-gray-500">高風險品牌</p>
               <p className="text-3xl font-bold text-rose-600 mt-2">
-                {data.summary.highRiskBrandCount}
+                {summary.highRiskBrandCount}
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                {data.summary.highRiskDefinition ?? 'ATI 排名前 10%'}
-                {data.summary.highRiskThreshold != null && (
-                  <span>（閾值 ≧ {data.summary.highRiskThreshold!.toFixed(1)}）</span>
+                {summary.highRiskDefinition ?? 'ATI 正1.5個標準差以上'}
+                {summary.highRiskThreshold != null && (
+                  <span>（閾值 ≧ {summary.highRiskThreshold.toFixed(1)}）</span>
                 )}
               </p>
             </div>
           </div>
         </section>
 
+        {/* 第一行：ATI 時間序列 + ATI 與互動率相關性分析 */}
         <section className="grid gap-6 lg:grid-cols-2">
           <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
@@ -495,9 +505,99 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
             </p>
           </div>
 
+          {/* ATI 與互動率相關性分析 */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">ATI 與互動率相關性分析</h3>
+            {loadingCorrelation ? (
+              <div className="h-64 flex items-center justify-center text-gray-500">
+                載入中...
+              </div>
+            ) : correlationData ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-[#F5F2F7] border border-[#D4C9E0] rounded-lg p-4">
+                    <p className="text-sm text-[#7A6B8F] font-medium">Spearman 相關係數</p>
+                    <p className="text-2xl font-bold text-[#5A4A6F] mt-1">
+                      {correlationData.correlation != null ? correlationData.correlation.toFixed(3) : 'N/A'}
+                    </p>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-700 font-medium">Pearson 相關係數</p>
+                    <p className="text-2xl font-bold text-blue-900 mt-1">
+                      {correlationData.pearsonCorrelation?.toFixed(3) || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart data={correlationData.dataPoints || []}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        type="number"
+                        dataKey="ati" 
+                        name="ATI"
+                        label={{ value: 'ATI', position: 'insideBottom', offset: -5 }}
+                        stroke="#6b7280"
+                      />
+                      <YAxis 
+                        type="number"
+                        dataKey="engagement" 
+                        name="互動率"
+                        label={{ value: '互動率', angle: -90, position: 'insideLeft' }}
+                        stroke="#6b7280"
+                      />
+                      <Tooltip 
+                        formatter={(value: number, name: string) => {
+                          if (name === 'ati') return [`${value.toFixed(1)}`, 'ATI'];
+                          if (name === 'engagement') return [`${value.toFixed(4)}`, '互動率'];
+                          return [value, name];
+                        }}
+                      />
+                      <Legend />
+                      <Scatter 
+                        dataKey="engagement" 
+                        fill="#AE9FD0" 
+                        fillOpacity={0.6}
+                        name="貼文"
+                      />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                  {correlationData.slope != null && correlationData.intercept != null && (
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                      迴歸線: y = {correlationData.slope.toFixed(4)}x + {correlationData.intercept.toFixed(4)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-gray-500">
+                無數據可用
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* 第二行：長尾貼文檔案夾 + Novelty × Diversity 分佈 */}
+        <section className="grid gap-6 lg:grid-cols-2">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">長尾貼文檔案夾</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                顯示互動率分佈右尾的極值貼文（前6名）。這些貼文雖然數量少，但互動表現異常突出，值得特別關注。
+              </p>
+            </div>
+            {loadingTailOutliers ? (
+              <div className="text-gray-500 text-sm">載入中...</div>
+            ) : tailOutliers.length > 0 ? (
+              <OutlierList posts={tailOutliers.slice(0, 6)} />
+            ) : (
+              <div className="text-gray-500 text-sm">無數據可用</div>
+            )}
+          </div>
+
           <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Novelty × Diversity 分佈（抽樣）
+              Novelty × Diversity 分佈
             </h3>
             <div className="h-80 w-full mb-4">
               <ResponsiveContainer width="100%" height="100%">
@@ -734,202 +834,6 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
           </section>
         )}
 
-        <section className="grid gap-6 lg:grid-cols-2">
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">長尾貼文檔案夾</h3>
-              <p className="text-xs text-gray-500 mt-1">
-                顯示互動率分佈右尾的極值貼文（前6名）。這些貼文雖然數量少，但互動表現異常突出，值得特別關注。
-              </p>
-            </div>
-            {loadingTailOutliers ? (
-              <div className="text-gray-500 text-sm">載入中...</div>
-            ) : tailOutliers.length > 0 ? (
-              <OutlierList posts={tailOutliers.slice(0, 6)} />
-            ) : (
-              <div className="text-gray-500 text-sm">無數據可用</div>
-            )}
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900">多模態貢獻拆解</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              文字、影像、metadata 對整體 ATI 的貢獻與權重估計
-            </p>
-            
-            {/* 堆疊柱狀圖顯示各模態的 ATI 貢獻 */}
-            <div className="h-64 mb-6">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[
-                  {
-                    name: '文字',
-                    ATI: data.modalityBreakdown.text.ati,
-                    Novelty: data.modalityBreakdown.text.novelty * 100,
-                    Diversity: data.modalityBreakdown.text.diversity * 100,
-                  },
-                  {
-                    name: '影像',
-                    ATI: data.modalityBreakdown.image.ati,
-                    Novelty: data.modalityBreakdown.image.novelty * 100,
-                    Diversity: data.modalityBreakdown.image.diversity * 100,
-                  },
-                  {
-                    name: 'Metadata',
-                    ATI: data.modalityBreakdown.metadata.ati,
-                    Novelty: data.modalityBreakdown.metadata.novelty * 100,
-                    Diversity: data.modalityBreakdown.metadata.diversity * 100,
-                  },
-                ]}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="name" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="ATI" fill="#AE9FD0" name="ATI" />
-                  <Bar dataKey="Novelty" fill="#e9c7c6" name="Novelty (×100)" />
-                  <Bar dataKey="Diversity" fill="#9fc3d0" name="Diversity (×100)" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* 圓餅圖顯示權重分配 */}
-            <div className="h-64 mb-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: '文字模態', value: data.modalityBreakdown.text.engagementWeight },
-                      { name: '影像模態', value: data.modalityBreakdown.image.engagementWeight },
-                      { name: 'Metadata', value: data.modalityBreakdown.metadata.engagementWeight },
-                    ]}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    <Cell fill="#AE9FD0" />
-                    <Cell fill="#e9c7c6" />
-                    <Cell fill="#9fc3d0" />
-                  </Pie>
-                  <Tooltip formatter={(value: number) => formatPercent(value)} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="space-y-3 text-sm">
-              {(['text', 'image', 'metadata'] as const).map((key) => {
-                const labelMap = {
-                  text: '文字模態',
-                  image: '影像模態',
-                  metadata: '互動 / 時間等 metadata',
-                };
-                const value = data.modalityBreakdown[key];
-                return (
-                  <div key={key} className="border border-gray-100 rounded-lg p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-900">{labelMap[key]}</span>
-                      <span className="text-xs text-gray-500">
-                        權重 {formatPercent(value.engagementWeight)}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-3 text-xs text-gray-600 mt-2">
-                      <span>ATI {value.ati.toFixed(1)}</span>
-                      <span>Novelty {value.novelty.toFixed(2)}</span>
-                      <span>Diversity {value.diversity.toFixed(2)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="text-xs text-gray-500 mt-4">
-              合成 ATI：{data.modalityBreakdown.combinedAti.toFixed(1)}
-            </p>
-          </div>
-        </section>
-
-        {/* ATI 與互動率相關性分析 */}
-        <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">ATI 與互動率相關性分析</h3>
-          {loadingCorrelation ? (
-            <div className="h-96 flex items-center justify-center text-gray-500">
-              載入中...
-            </div>
-          ) : correlationData ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="bg-[#F5F2F7] border border-[#D4C9E0] rounded-lg p-4">
-                  <p className="text-sm text-[#7A6B8F] font-medium">Spearman 相關係數</p>
-                  <p className="text-2xl font-bold text-[#5A4A6F] mt-1">
-                    {correlationData.correlation != null ? correlationData.correlation.toFixed(3) : 'N/A'}
-                  </p>
-            </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-700 font-medium">Pearson 相關係數</p>
-                  <p className="text-2xl font-bold text-blue-900 mt-1">
-                    {correlationData.pearsonCorrelation?.toFixed(3) || 'N/A'}
-                  </p>
-          </div>
-          </div>
-              <div className="h-96">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ScatterChart data={correlationData.dataPoints || []}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis 
-                      type="number"
-                      dataKey="ati" 
-                      name="ATI"
-                      label={{ value: 'ATI', position: 'insideBottom', offset: -5 }}
-                      stroke="#6b7280"
-                    />
-                    <YAxis 
-                      type="number"
-                      dataKey="engagement" 
-                      name="互動率"
-                      label={{ value: '互動率', angle: -90, position: 'insideLeft' }}
-                      stroke="#6b7280"
-                    />
-                    <Tooltip 
-                      formatter={(value: number, name: string) => {
-                        if (name === 'ati') return [`${value.toFixed(1)}`, 'ATI'];
-                        if (name === 'engagement') return [`${value.toFixed(4)}`, '互動率'];
-                        return [value, name];
-                      }}
-                    />
-                    <Legend />
-                    <Scatter 
-                      dataKey="engagement" 
-                      fill="#AE9FD0" 
-                      fillOpacity={0.6}
-                      name="貼文"
-                    />
-                  </ScatterChart>
-                </ResponsiveContainer>
-                {/* 手動繪製迴歸線 */}
-                {correlationData.regressionLine && correlationData.regressionLine.length === 2 && correlationData.slope != null && correlationData.intercept != null && (
-                  <div className="mt-2 text-xs text-gray-600 text-center">
-                    <p>迴歸線: y = {correlationData.slope.toFixed(4)}x + {correlationData.intercept.toFixed(4)}</p>
-                    <p className="text-gray-500 mt-1">
-                      (從 ({correlationData.regressionLine[0].ati.toFixed(1)}, {correlationData.regressionLine[0].engagement.toFixed(4)}) 
-                      到 ({correlationData.regressionLine[1].ati.toFixed(1)}, {correlationData.regressionLine[1].engagement.toFixed(4)}))
-                    </p>
-                  </div>
-                )}
-              </div>
-              {correlationData.slope != null && correlationData.intercept != null && (
-                <p className="text-xs text-gray-500 mt-2">
-                  迴歸線公式: y = {correlationData.slope.toFixed(4)}x + {correlationData.intercept.toFixed(4)}
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="h-96 flex items-center justify-center text-gray-500">
-              無數據可用
-            </div>
-          )}
-        </section>
 
         {/* 分箱（Decile）分析 */}
         <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">

@@ -67,7 +67,7 @@ def parse_rel_img_paths(cell):
     if ',' in s: return [x.strip() for x in s.split(',') if x.strip()]
     return [s]
 
-reader = easyocr.Reader(['ch_tra','en'], gpu=True)
+    reader = easyocr.Reader(['ch_tra','en'], gpu=False)
 
 def ocr_single_image(p):
     try: return " ".join([r.strip() for r in reader.readtext(p, detail=0, paragraph=True) if isinstance(r, str)])

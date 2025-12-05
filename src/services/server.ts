@@ -186,6 +186,30 @@ app.get('/api/market/stats', async (req, res) => {
   }
 });
 
+// GET /api/market/summary - 取得市場摘要（包含高風險品牌計算）
+app.get('/api/market/summary', async (req, res) => {
+  try {
+    const stats = await getMarketStats();
+    
+    // 計算時間範圍（從貼文數據推斷）
+    const timeframeLabel = "2025/04 – 2025/09";
+    
+    return res.json({
+      timeframeLabel,
+      totalBrands: stats.totalBrands,
+      totalPosts: stats.totalPosts,
+      avgAti: stats.avgAti,
+      highRiskBrandCount: stats.highRiskBrandCount,
+      highRiskThreshold: stats.highRiskThreshold,
+      highRiskDefinition: stats.highRiskDefinition,
+      lastUpdated: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    console.error('market summary error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
 // GET /api/market/map - 取得市場地圖數據（只支援品牌定位圖）
 app.get('/api/market/map', async (req, res) => {
   try {
