@@ -1,13 +1,15 @@
 import React from 'react';
 import { Message as MessageType } from '../types';
 import Message from './Message';
+import { ThreeDots } from 'react-loader-spinner';
 
 interface ChatAreaProps {
   messages: MessageType[];
   conversationTitle?: string;
+  isLoading?: boolean;
 }
 
-const ChatArea: React.FC<ChatAreaProps> = ({ messages, conversationTitle }) => {
+const ChatArea: React.FC<ChatAreaProps> = ({ messages, conversationTitle, isLoading }) => {
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
@@ -71,6 +73,21 @@ const ChatArea: React.FC<ChatAreaProps> = ({ messages, conversationTitle }) => {
         {messages.map((message) => (
           <Message key={message.id} message={message} />
         ))}
+
+        {isLoading && (
+          <div className="flex items-center justify-start px-6 py-4">
+            <div className="flex items-center gap-3 bg-gray-100 rounded-2xl px-4 py-2">
+              <ThreeDots
+                height="24"
+                width="48"
+                color="#686868ff"
+                ariaLabel="loading"
+                visible
+              />
+              <span className="text-sm text-gray-600">Analyzing...</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

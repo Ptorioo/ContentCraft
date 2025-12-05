@@ -16,7 +16,8 @@ function App() {
     currentConversationId,
     createNewConversation,
     setCurrentConversationId,
-    addMessage
+    addMessage,
+    isLoading,
   } = useConversations();
 
   const handleToggleSidebar = () => {
@@ -52,9 +53,11 @@ function App() {
         <ChatArea
           messages={currentConversation?.messages || []}
           conversationTitle={currentConversation?.title}
+          isLoading={isLoading}
         />
         <MessageInput
           onSendMessage={handleSendMessage}
+          disabled={isLoading}
         />
       </main>
     </div>
