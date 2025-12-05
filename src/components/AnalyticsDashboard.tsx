@@ -80,6 +80,16 @@ const RiskTable: React.FC<{
   </div>
 );
 
+// 長尾貼文檔案夾的固定 URL（按順序對應前 6 個貼文）
+const LONG_TAIL_POST_URLS = [
+  'https://www.instagram.com/reel/DNTA_FxyWFD/',
+  'https://www.instagram.com/p/DJWP2pIyDz3/',
+  'https://www.instagram.com/reel/DL9-XPXRD23/',
+  'https://www.instagram.com/reel/DMt686DTUb5/',
+  'https://www.instagram.com/reel/DMXZt3CS7K_/',
+  'https://www.instagram.com/reel/DMxpr3LRQQD/',
+];
+
 const OutlierList: React.FC<{ posts: TailOutlierPost[] }> = ({ posts }) => (
   <div className="grid gap-4 md:grid-cols-2">
     {posts.map((post, index) => {
@@ -92,10 +102,14 @@ const OutlierList: React.FC<{ posts: TailOutlierPost[] }> = ({ posts }) => (
       const commentCount = post.commentCount ?? 0;
       const followerCount = post.followerCount ?? 0;
       
-      return (
+      // 獲取對應的 URL（僅前 6 個貼文有 URL）
+      const postUrl = index < LONG_TAIL_POST_URLS.length ? LONG_TAIL_POST_URLS[index] : undefined;
+      
+      const PostCard = (
         <div
-          key={post.postId || `post-${index}`}
-          className="bg-white border border-gray-200 rounded-xl p-4 flex gap-4 shadow-sm hover:shadow-md transition-shadow"
+          className={`bg-white border border-gray-200 rounded-xl p-4 flex gap-4 shadow-sm transition-shadow ${
+            postUrl ? 'hover:shadow-md cursor-pointer' : ''
+          }`}
         >
           <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center relative flex-shrink-0">
           {post.imageUrl ? (
@@ -136,6 +150,23 @@ const OutlierList: React.FC<{ posts: TailOutlierPost[] }> = ({ posts }) => (
           </div>
         </div>
       </div>
+      );
+      
+      // 如果有 URL，則包裝在 <a> 標籤中
+      return postUrl ? (
+        <a
+          key={post.postId || `post-${index}`}
+          href={postUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+        >
+          {PostCard}
+        </a>
+      ) : (
+        <div key={post.postId || `post-${index}`}>
+          {PostCard}
+        </div>
       );
     })}
   </div>
@@ -406,17 +437,21 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                       domain={[0, 1]}
                     />
                     <Tooltip 
-                      formatter={(value: number, name: string) => {
-                        if (name === 'avgAti') return [`${value.toFixed(1)}`, 'ATI'];
-                        if (name === 'avgNovelty') return [`${value.toFixed(3)}`, 'Novelty'];
-                        if (name === 'avgDiversity') return [`${value.toFixed(3)}`, 'Diversity'];
-                        return [value, name];
-                      }}
-                      labelStyle={{ color: '#374151', fontWeight: 'bold' }}
-                      contentStyle={{ 
-                        backgroundColor: '#fff', 
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px'
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload || payload.length === 0) return null;
+                        return (
+                          <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-md text-sm">
+                            <p className="font-semibold text-gray-900 mb-2">{label}</p>
+                            {payload.map((entry: any, index: number) => {
+                              const value = typeof entry.value === 'number' ? entry.value.toFixed(3) : entry.value;
+                              return (
+                                <p key={index} style={{ color: entry.color }}>
+                                  {entry.name}: {value}
+                                </p>
+                              );
+                            })}
+                          </div>
+                        );
                       }}
                     />
                     <Legend />
@@ -456,7 +491,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
             </div>
             )}
             <p className="mt-4 text-xs text-gray-400">
-              * 時間序列按貼文順序分組，模擬 6 個月的趨勢變化
+              * 時間序列按貼文順序分組
             </p>
           </div>
 
@@ -589,30 +624,63 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                     {activeCase.trapRanking === 'highest' ? '平均陷阱高' : '保持差異'}
                   </span>
                 </div>
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  {activeCase.baseline.imageUrl ? (
-                    <img
-                      src={activeCase.baseline.imageUrl}
-                      alt={activeCase.brandName}
-                      className="w-full h-48 object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
-                      <Sparkles className="text-purple-500" size={28} />
+                {activeCase.baseline.url ? (
+                  <a
+                    href={activeCase.baseline.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                  >
+                    {activeCase.baseline.imageUrl ? (
+                      <img
+                        src={activeCase.baseline.imageUrl}
+                        alt={activeCase.brandName}
+                        className="w-full h-48 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
+                        <Sparkles className="text-purple-500" size={28} />
+                      </div>
+                    )}
+                    <div className="p-4 space-y-2 text-sm text-gray-700">
+                      <p className="text-xs text-gray-500">{activeCase.baseline.date}</p>
+                      <p className="font-medium text-gray-900">{activeCase.baseline.captionSnippet}</p>
+                      <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                        <span>ATI {activeCase.baseline.ati.toFixed(1)}</span>
+                        <span>Novelty {activeCase.baseline.novelty.toFixed(2)}</span>
+                        <span>Diversity {activeCase.baseline.diversity.toFixed(2)}</span>
+                        <span>❤️ {activeCase.baseline.likeCount}</span>
+                        <span>💬 {activeCase.baseline.commentCount}</span>
+                      </div>
+                      <p className="text-xs text-blue-600 mt-2">🔗 查看原始貼文</p>
                     </div>
-                  )}
-                  <div className="p-4 space-y-2 text-sm text-gray-700">
-                    <p className="text-xs text-gray-500">{activeCase.baseline.date}</p>
-                    <p className="font-medium text-gray-900">{activeCase.baseline.captionSnippet}</p>
-                    <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-                      <span>ATI {activeCase.baseline.ati.toFixed(1)}</span>
-                      <span>Novelty {activeCase.baseline.novelty.toFixed(2)}</span>
-                      <span>Diversity {activeCase.baseline.diversity.toFixed(2)}</span>
-                      <span>❤️ {activeCase.baseline.likeCount}</span>
-                      <span>💬 {activeCase.baseline.commentCount}</span>
+                  </a>
+                ) : (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    {activeCase.baseline.imageUrl ? (
+                      <img
+                        src={activeCase.baseline.imageUrl}
+                        alt={activeCase.brandName}
+                        className="w-full h-48 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
+                        <Sparkles className="text-purple-500" size={28} />
+                      </div>
+                    )}
+                    <div className="p-4 space-y-2 text-sm text-gray-700">
+                      <p className="text-xs text-gray-500">{activeCase.baseline.date}</p>
+                      <p className="font-medium text-gray-900">{activeCase.baseline.captionSnippet}</p>
+                      <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                        <span>ATI {activeCase.baseline.ati.toFixed(1)}</span>
+                        <span>Novelty {activeCase.baseline.novelty.toFixed(2)}</span>
+                        <span>Diversity {activeCase.baseline.diversity.toFixed(2)}</span>
+                        <span>❤️ {activeCase.baseline.likeCount}</span>
+                        <span>💬 {activeCase.baseline.commentCount}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -795,7 +863,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                 <div className="bg-[#F5F2F7] border border-[#D4C9E0] rounded-lg p-4">
                   <p className="text-sm text-[#7A6B8F] font-medium">Spearman 相關係數</p>
                   <p className="text-2xl font-bold text-[#5A4A6F] mt-1">
-                    {correlationData.correlation.toFixed(3)}
+                    {correlationData.correlation != null ? correlationData.correlation.toFixed(3) : 'N/A'}
                   </p>
             </div>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -807,7 +875,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
           </div>
               <div className="h-96">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ScatterChart data={correlationData.dataPoints}>
+                  <ScatterChart data={correlationData.dataPoints || []}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis 
                       type="number"
@@ -840,7 +908,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                   </ScatterChart>
                 </ResponsiveContainer>
                 {/* 手動繪製迴歸線 */}
-                {correlationData.regressionLine && correlationData.regressionLine.length === 2 && (
+                {correlationData.regressionLine && correlationData.regressionLine.length === 2 && correlationData.slope != null && correlationData.intercept != null && (
                   <div className="mt-2 text-xs text-gray-600 text-center">
                     <p>迴歸線: y = {correlationData.slope.toFixed(4)}x + {correlationData.intercept.toFixed(4)}</p>
                     <p className="text-gray-500 mt-1">
@@ -850,9 +918,11 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                   </div>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                迴歸線公式: y = {correlationData.slope.toFixed(4)}x + {correlationData.intercept.toFixed(4)}
-              </p>
+              {correlationData.slope != null && correlationData.intercept != null && (
+                <p className="text-xs text-gray-500 mt-2">
+                  迴歸線公式: y = {correlationData.slope.toFixed(4)}x + {correlationData.intercept.toFixed(4)}
+                </p>
+              )}
             </div>
           ) : (
             <div className="h-96 flex items-center justify-center text-gray-500">

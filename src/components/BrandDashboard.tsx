@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Users, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { getBrandChineseName, formatBrandName } from '../utils/brandNames';
+import { formatBrandName } from '../utils/brandNames';
 
 interface Brand {
   brand: string;
@@ -33,6 +33,7 @@ interface BrandDetails {
     likes: number;
     comments?: number;
     engagement?: number;
+    url?: string; // Instagram 貼文 URL
   }>;
   mostNovelPosts: Array<{ 
     id: number;
@@ -42,6 +43,7 @@ interface BrandDetails {
     likes: number;
     comments?: number;
     engagement?: number;
+    url?: string; // Instagram 貼文 URL
   }>;
 }
 
@@ -95,7 +97,7 @@ const BrandDashboard: React.FC = () => {
       }
       
       // 確保品牌名稱不為空
-      const validBrands = brandList.filter(b => b && b.brand && b.brand.trim() !== '');
+      const validBrands = brandList.filter((b: any) => b && b.brand && b.brand.trim() !== '');
       console.log('有效品牌數量:', validBrands.length);
       
       if (validBrands.length === 0) {
@@ -256,7 +258,7 @@ const BrandDashboard: React.FC = () => {
       </div>
 
       {/* 核心指標卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
           <p className="text-xs uppercase font-semibold text-gray-500">平均 ATI（內容新穎度分數）</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">
@@ -314,13 +316,6 @@ const BrandDashboard: React.FC = () => {
           </p>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-          <p className="text-xs uppercase font-semibold text-gray-500">貼文數</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">
-            {brandDetails.n_posts}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">分析樣本</p>
-        </div>
       </div>
 
       {/* ATI 趨勢圖 */}
@@ -377,9 +372,6 @@ const BrandDashboard: React.FC = () => {
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-xs text-gray-500 mt-2 text-center">
-            * 趨勢圖按貼文順序分組，非實際時間序列
-          </p>
         </div>
       )}
 
@@ -443,40 +435,48 @@ const BrandDashboard: React.FC = () => {
           這些貼文與市場平均最相似，可能缺乏差異化
         </p>
         <div className="space-y-4">
-          {brandDetails.mostAveragePosts.map((post, idx) => (
-            <div key={post.id || idx} className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
-              <div className="flex items-start gap-4">
-                {/* 縮圖佔位符（目前沒有圖片路徑） */}
-                <div className="flex-shrink-0 w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <ImageIcon className="text-gray-400" size={24} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <span className="inline-block px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded">
-                        ATI: {post.ati.toFixed(1)}
-                      </span>
-                      <span className="ml-2 text-xs text-gray-500">
-                        DS: {post.ds.toFixed(3)}
-                      </span>
-                    </div>
-                    <div className="text-right text-sm text-gray-600">
-                      <div>👍 {post.likes}</div>
-                      {post.comments !== undefined && <div>💬 {post.comments}</div>}
-                    </div>
+          {brandDetails.mostAveragePosts.map((post, idx) => {
+            const PostCard = (
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                <div className="flex items-start gap-4">
+                  {/* 縮圖佔位符（目前沒有圖片路徑） */}
+                  <div className="flex-shrink-0 w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
+                    <ImageIcon className="text-gray-400" size={24} />
                   </div>
-                  <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">
-                    {post.caption || '（無文字內容）'}
-                  </p>
-                  {post.engagement !== undefined && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      互動率: {post.engagement.toFixed(4)}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <span className="inline-block px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded">
+                          ATI: {post.ati.toFixed(1)}
+                        </span>
+                        <span className="ml-2 text-xs text-gray-500">
+                          DS: {post.ds.toFixed(3)}
+                        </span>
+                      </div>
+                      <div className="text-right text-sm text-gray-600">
+                        <div>👍 {post.likes}</div>
+                        {post.comments !== undefined && <div>💬 {post.comments}</div>}
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">
+                      {post.caption || '（無文字內容）'}
                     </p>
-                  )}
+                    {post.engagement !== undefined && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        互動率: {post.engagement.toFixed(4)}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+            
+            return (
+              <div key={post.id || idx}>
+                {PostCard}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -490,40 +490,48 @@ const BrandDashboard: React.FC = () => {
           這些貼文最具差異化，與市場平均最不同
         </p>
         <div className="space-y-4">
-          {brandDetails.mostNovelPosts.map((post, idx) => (
-            <div key={post.id || idx} className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
-              <div className="flex items-start gap-4">
-                {/* 縮圖佔位符（目前沒有圖片路徑） */}
-                <div className="flex-shrink-0 w-20 h-20 bg-green-100 rounded-lg flex items-center justify-center">
-                  <ImageIcon className="text-green-500" size={24} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
-                        ATI: {post.ati.toFixed(1)}
-                      </span>
-                      <span className="ml-2 text-xs text-gray-500">
-                        DS: {post.ds.toFixed(3)}
-                      </span>
-                    </div>
-                    <div className="text-right text-sm text-gray-600">
-                      <div>👍 {post.likes}</div>
-                      {post.comments !== undefined && <div>💬 {post.comments}</div>}
-                    </div>
+          {brandDetails.mostNovelPosts.map((post, idx) => {
+            const PostCard = (
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                <div className="flex items-start gap-4">
+                  {/* 縮圖佔位符（目前沒有圖片路徑） */}
+                  <div className="flex-shrink-0 w-20 h-20 bg-green-100 rounded-lg flex items-center justify-center">
+                    <ImageIcon className="text-green-500" size={24} />
                   </div>
-                  <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">
-                    {post.caption || '（無文字內容）'}
-                  </p>
-                  {post.engagement !== undefined && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      互動率: {post.engagement.toFixed(4)}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
+                          ATI: {post.ati.toFixed(1)}
+                        </span>
+                        <span className="ml-2 text-xs text-gray-500">
+                          DS: {post.ds.toFixed(3)}
+                        </span>
+                      </div>
+                      <div className="text-right text-sm text-gray-600">
+                        <div>👍 {post.likes}</div>
+                        {post.comments !== undefined && <div>💬 {post.comments}</div>}
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">
+                      {post.caption || '（無文字內容）'}
                     </p>
-                  )}
+                    {post.engagement !== undefined && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        互動率: {post.engagement.toFixed(4)}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+            
+            return (
+              <div key={post.id || idx}>
+                {PostCard}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

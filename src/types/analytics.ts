@@ -76,6 +76,7 @@ export interface PostSnapshot {
   date: string;
   captionSnippet: string;
   imageUrl?: string;
+  url?: string; // Instagram 貼文 URL
   ati: number;
   novelty: number;
   diversity: number;

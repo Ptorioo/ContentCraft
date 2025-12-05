@@ -59,9 +59,15 @@ export const brandNameMap: Record<string, string> = {
   'woocha2019': '金茶伍',
   'wooteatw': '五桐號',
   'wuwin_tw': '無飲現萃茶',
-  'yiqingyuen': '清原',
+  'yiqingyuen': '一青苑',
   'youintw2021': '有飲',
   'napteazzz': '再睡五分鐘',
+  'taro_yuan.official': '清原',
+  'zhizuocha': '植作茶',
+  'thefarfarfarm': '發發牧場',
+  'lagmilktea': 'LAG累擱',
+  'y.j_coffee': '玉津咖啡',
+  'topup.tw': '序序茶',
 };
 
 /**

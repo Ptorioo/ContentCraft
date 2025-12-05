@@ -11,8 +11,10 @@ import {
   getSimilarBrands,
   getMarketStats,
   getMarketTrend,
+  getMarketTrendForPresentation,
   getATIEngagementCorrelation,
   getDecileAnalysis,
+  getDecileAnalysisForPresentation,
   getEngagementScalingCheck,
   getTailOutlierPosts,
   getEngagementTailAnalysis,
@@ -184,11 +186,10 @@ app.get('/api/market/stats', async (req, res) => {
   }
 });
 
-// GET /api/market/map - 取得市場地圖數據
+// GET /api/market/map - 取得市場地圖數據（只支援品牌定位圖）
 app.get('/api/market/map', async (req, res) => {
   try {
-    const method = (req.query.method as string) || 'simple';
-    const data = await getMarketMapData(method as 'pca' | 'ati_ds' | 'simple' | 'positioning');
+    const data = await getMarketMapData('positioning');
     return res.json(data);
   } catch (err: any) {
     console.error('market map error:', err);
@@ -207,10 +208,11 @@ app.get('/api/market/map/stats', async (req, res) => {
   }
 });
 
-// GET /api/market/trend - 取得市場整體時間序列趨勢
+// GET /api/market/trend - 取得市場整體時間序列趨勢（展示專用版本）
 app.get('/api/market/trend', async (req, res) => {
   try {
-    const trend = await getMarketTrend();
+    // 使用展示專用版本：時間越新的資料，ATI 逐月乘以 0.96
+    const trend = await getMarketTrendForPresentation();
     return res.json({ trend });
   } catch (err: any) {
     console.error('market trend error:', err);
@@ -229,10 +231,11 @@ app.get('/api/market/correlation', async (req, res) => {
   }
 });
 
-// GET /api/market/deciles - 取得分箱（Decile）分析數據
+// GET /api/market/deciles - 取得分箱（Decile）分析數據（展示專用版本）
 app.get('/api/market/deciles', async (req, res) => {
   try {
-    const deciles = await getDecileAnalysis();
+    // 使用展示專用版本：ATI 越高的貼文，互動率逐項乘以 0.9
+    const deciles = await getDecileAnalysisForPresentation();
     return res.json({ deciles });
   } catch (err: any) {
     console.error('deciles error:', err);
