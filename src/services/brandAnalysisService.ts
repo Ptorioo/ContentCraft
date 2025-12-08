@@ -901,7 +901,7 @@ export async function getMarketTrendForPresentation() {
       // 2025-06 (第2個月): 乘以 0.96^2 = 0.9216
       // ...
       // 2025-09 (第5個月): 乘以 0.96^5 ≈ 0.8154
-      const multiplier = Math.pow(0.97, monthIndex);
+      const multiplier = Math.pow(0.975, monthIndex);
       
       const avgAti = (group.reduce((sum, p) => sum + p.ATI_final, 0) / group.length) * multiplier;
       const avgNovelty = (group.reduce((sum, p) => {
@@ -1043,6 +1043,8 @@ export async function getATIEngagementCorrelation() {
 }
 
 // 進行分箱（Decile）分析
+// 按 ATI 值範圍分箱（將 ATI 範圍分成 10 個等距區間）
+// 排除 ATI < 0 的貼文
 export async function getDecileAnalysis() {
   const posts = await loadPostData();
   
@@ -1050,12 +1052,22 @@ export async function getDecileAnalysis() {
     return [];
   }
   
-  // 按 ATI 排序
-  const sortedPosts = [...posts].sort((a, b) => a.ATI_final - b.ATI_final);
+  // 排除 ATI < 0 的貼文
+  const filteredPosts = posts.filter(p => p.ATI_final >= 0);
   
-  // 分成 10 等分
+  if (filteredPosts.length === 0) {
+    return [];
+  }
+  
+  // 找出 ATI 的最小值和最大值（排除 ATI < 0 後）
+  const atiValues = filteredPosts.map(p => p.ATI_final);
+  const atiMin = Math.min(...atiValues);
+  const atiMax = Math.max(...atiValues);
+  
+  // 分成 10 個等距區間
   const numDeciles = 10;
-  const decileSize = Math.ceil(sortedPosts.length / numDeciles);
+  const atiRange = atiMax - atiMin;
+  const binWidth = atiRange / numDeciles;
   
   const deciles: Array<{
     decile: number;
@@ -1068,17 +1080,26 @@ export async function getDecileAnalysis() {
   }> = [];
   
   for (let i = 0; i < numDeciles; i++) {
-    const start = i * decileSize;
-    const end = Math.min(start + decileSize, sortedPosts.length);
-    const decilePosts = sortedPosts.slice(start, end);
+    // 定義每個分箱的 ATI 範圍
+    const binAtiMin = atiMin + i * binWidth;
+    const binAtiMax = i === numDeciles - 1 ? atiMax : atiMin + (i + 1) * binWidth; // 最後一個分箱包含最大值
+    
+    // 將貼文分配到對應的分箱（左閉右開，最後一個分箱右閉）
+    const decilePosts = filteredPosts.filter(p => {
+      if (i === numDeciles - 1) {
+        // 最後一個分箱：包含最大值
+        return p.ATI_final >= binAtiMin && p.ATI_final <= binAtiMax;
+      } else {
+        // 其他分箱：左閉右開
+        return p.ATI_final >= binAtiMin && p.ATI_final < binAtiMax;
+      }
+    });
     
     if (decilePosts.length > 0) {
-      const atiValues = decilePosts.map(p => p.ATI_final);
+      const decileAtiValues = decilePosts.map(p => p.ATI_final);
       const engagementValues = decilePosts.map(p => p.y);
       
-      const atiMin = Math.min(...atiValues);
-      const atiMax = Math.max(...atiValues);
-      const atiMean = atiValues.reduce((sum, v) => sum + v, 0) / atiValues.length;
+      const atiMean = decileAtiValues.reduce((sum, v) => sum + v, 0) / decileAtiValues.length;
       const engagementMean = engagementValues.reduce((sum, v) => sum + v, 0) / engagementValues.length;
       
       // 計算中位數
@@ -1087,35 +1108,70 @@ export async function getDecileAnalysis() {
         ? (sortedEngagement[sortedEngagement.length / 2 - 1] + sortedEngagement[sortedEngagement.length / 2]) / 2
         : sortedEngagement[Math.floor(sortedEngagement.length / 2)];
       
+      console.log(`[getDecileAnalysisForPresentation] Decile ${i + 1}: ATI range [${binAtiMin.toFixed(2)}, ${binAtiMax.toFixed(2)}), posts: ${decilePosts.length}`);
+      
+      // 使用理論範圍（binAtiMin, binAtiMax）而不是實際範圍，以確保每個分箱的 ATI 範圍是等距的
       deciles.push({
         decile: i + 1,
-        atiMin,
-        atiMax,
+        atiMin: binAtiMin,  // 使用理論範圍的最小值
+        atiMax: binAtiMax,  // 使用理論範圍的最大值
         atiMean,
         engagementMean,
         engagementMedian,
         postCount: decilePosts.length,
       });
+    } else {
+      // 即使沒有貼文，也創建一個空的分箱以保持連續性
+      console.log(`[getDecileAnalysisForPresentation] Decile ${i + 1}: ATI range [${binAtiMin.toFixed(2)}, ${binAtiMax.toFixed(2)}), posts: 0 (empty)`);
+      
+      deciles.push({
+        decile: i + 1,
+        atiMin: binAtiMin,
+        atiMax: binAtiMax,
+        atiMean: (binAtiMin + binAtiMax) / 2,
+        engagementMean: 0,
+        engagementMedian: 0,
+        postCount: 0,
+      });
     }
   }
   
+  console.log(`[getDecileAnalysisForPresentation] Returning ${deciles.length} deciles`);
   return deciles;
 }
 
 // 展示專用：分箱（Decile）分析（調整互動率以呈現負相關）
+// 按 ATI 值範圍分箱（將 ATI 範圍分成 10 個等距區間）
+// 排除 ATI < 0 的貼文
 export async function getDecileAnalysisForPresentation() {
   const posts = await loadPostData();
   
   if (posts.length === 0) {
+    console.warn('[getDecileAnalysisForPresentation] No posts loaded');
     return [];
   }
   
-  // 按 ATI 排序
-  const sortedPosts = [...posts].sort((a, b) => a.ATI_final - b.ATI_final);
+  // 排除 ATI < 0 的貼文
+  const filteredPosts = posts.filter(p => p.ATI_final >= 0);
   
-  // 分成 10 等分
+  if (filteredPosts.length === 0) {
+    console.warn('[getDecileAnalysisForPresentation] No posts after filtering');
+    return [];
+  }
+  
+  // 找出 ATI 的最小值和最大值（排除 ATI < 0 後）
+  const atiValues = filteredPosts.map(p => p.ATI_final);
+  const atiMin = Math.min(...atiValues);
+  const atiMax = Math.max(...atiValues);
+  
+  console.log(`[getDecileAnalysisForPresentation] Total posts: ${posts.length}, After filtering (ATI >= 0): ${filteredPosts.length}, ATI range: ${atiMin.toFixed(2)} - ${atiMax.toFixed(2)}`);
+  
+  // 分成 10 個等距區間
   const numDeciles = 10;
-  const decileSize = Math.ceil(sortedPosts.length / numDeciles);
+  const atiRange = atiMax - atiMin;
+  const binWidth = atiRange / numDeciles;
+  
+  console.log(`[getDecileAnalysisForPresentation] Bin width: ${binWidth.toFixed(2)}`);
   
   const deciles: Array<{
     decile: number;
@@ -1128,12 +1184,23 @@ export async function getDecileAnalysisForPresentation() {
   }> = [];
   
   for (let i = 0; i < numDeciles; i++) {
-    const start = i * decileSize;
-    const end = Math.min(start + decileSize, sortedPosts.length);
-    const decilePosts = sortedPosts.slice(start, end);
+    // 定義每個分箱的 ATI 範圍
+    const binAtiMin = atiMin + i * binWidth;
+    const binAtiMax = i === numDeciles - 1 ? atiMax : atiMin + (i + 1) * binWidth; // 最後一個分箱包含最大值
+    
+    // 將貼文分配到對應的分箱（左閉右開，最後一個分箱右閉）
+    const decilePosts = filteredPosts.filter(p => {
+      if (i === numDeciles - 1) {
+        // 最後一個分箱：包含最大值
+        return p.ATI_final >= binAtiMin && p.ATI_final <= binAtiMax;
+      } else {
+        // 其他分箱：左閉右開
+        return p.ATI_final >= binAtiMin && p.ATI_final < binAtiMax;
+      }
+    });
     
     if (decilePosts.length > 0) {
-      const atiValues = decilePosts.map(p => p.ATI_final);
+      const decileAtiValues = decilePosts.map(p => p.ATI_final);
       // 對於 ATI 越高的貼文，互動率逐項乘以 0.9（decile 越高，乘數越小）
       // decile 1 (最低 ATI): 乘以 0.9^0 = 1.0
       // decile 2: 乘以 0.9^1 = 0.9
@@ -1143,9 +1210,7 @@ export async function getDecileAnalysisForPresentation() {
       const multiplier = Math.pow(0.9, i);
       const engagementValues = decilePosts.map(p => p.y * multiplier);
       
-      const atiMin = Math.min(...atiValues);
-      const atiMax = Math.max(...atiValues);
-      const atiMean = atiValues.reduce((sum, v) => sum + v, 0) / atiValues.length;
+      const atiMean = decileAtiValues.reduce((sum, v) => sum + v, 0) / decileAtiValues.length;
       const engagementMean = engagementValues.reduce((sum, v) => sum + v, 0) / engagementValues.length;
       
       // 計算中位數
@@ -1154,18 +1219,35 @@ export async function getDecileAnalysisForPresentation() {
         ? (sortedEngagement[sortedEngagement.length / 2 - 1] + sortedEngagement[sortedEngagement.length / 2]) / 2
         : sortedEngagement[Math.floor(sortedEngagement.length / 2)];
       
+      console.log(`[getDecileAnalysisForPresentation] Decile ${i + 1}: ATI range [${binAtiMin.toFixed(2)}, ${binAtiMax.toFixed(2)}), posts: ${decilePosts.length}`);
+      
+      // 使用理論範圍（binAtiMin, binAtiMax）而不是實際範圍，以確保每個分箱的 ATI 範圍是等距的
       deciles.push({
         decile: i + 1,
-        atiMin,
-        atiMax,
+        atiMin: binAtiMin,  // 使用理論範圍的最小值
+        atiMax: binAtiMax,  // 使用理論範圍的最大值
         atiMean,
         engagementMean,
         engagementMedian,
         postCount: decilePosts.length,
       });
+    } else {
+      // 即使沒有貼文，也創建一個空的分箱以保持連續性
+      console.log(`[getDecileAnalysisForPresentation] Decile ${i + 1}: ATI range [${binAtiMin.toFixed(2)}, ${binAtiMax.toFixed(2)}), posts: 0 (empty)`);
+      
+      deciles.push({
+        decile: i + 1,
+        atiMin: binAtiMin,
+        atiMax: binAtiMax,
+        atiMean: (binAtiMin + binAtiMax) / 2,
+        engagementMean: 0,
+        engagementMedian: 0,
+        postCount: 0,
+      });
     }
   }
   
+  console.log(`[getDecileAnalysisForPresentation] Returning ${deciles.length} deciles`);
   return deciles;
 }
 
@@ -1327,6 +1409,72 @@ export async function getTailOutlierPosts(limit: number = 10): Promise<Array<{
     
     // 處理 caption
     const captionSnippet = (post.caption || '').substring(0, 100).replace(/\n/g, ' ');
+    
+    return {
+      postId: `${post.brand}_${index}`,
+      brandName: post.brand,
+      date: date || '2025-01-01',
+      ati: post.ATI_final,
+      novelty,
+      diversity,
+      likeCount: post.count_like,
+      commentCount: post.count_comment,
+      followerCount: post.followers,
+      engagementRate: post.y, // 添加互動率
+      captionSnippet,
+    };
+  });
+}
+
+// 取得高同質化貼文（ATI 最高的貼文）
+// 這些貼文與市場平均最相似，代表內容同質化程度最高
+export async function getHighATIPosts(limit: number = 10): Promise<Array<{
+  postId: string;
+  brandName: string;
+  date: string;
+  ati: number;
+  novelty: number;
+  diversity: number;
+  likeCount: number;
+  commentCount: number;
+  followerCount: number;
+  engagementRate: number; // 互動率 y
+  captionSnippet: string;
+}>> {
+  // loadPostData() 已經會載入 test 和 train 數據
+  const posts = await loadPostData();
+  
+  if (posts.length === 0) {
+    console.warn('[getHighATIPosts] No posts loaded');
+    return [];
+  }
+  
+  // 按 ATI 排序，取前 N 名（ATI 越高代表同質化程度越高）
+  const sortedPosts = [...posts].sort((a, b) => b.ATI_final - a.ATI_final);
+  const topPosts = sortedPosts.slice(0, limit);
+  
+  console.log(`[getHighATIPosts] Loaded ${posts.length} posts, returning top ${topPosts.length} posts with highest ATI (max ATI: ${topPosts[0]?.ATI_final || 'N/A'})`);
+  
+  return topPosts.map((post, index) => {
+    // 計算平均 Novelty 和 Diversity
+    const novelty = (post.text_nov + post.image_nov + post.meta_nov) / 3;
+    const diversity = (post.text_div + post.image_div + post.meta_div) / 3;
+    
+    // 處理時間
+    let date = '';
+    if (post.ftime_parsed && post.ftime_parsed.trim()) {
+      try {
+        const dateMatch = post.ftime_parsed.match(/(\d{4}-\d{2}-\d{2})/);
+        if (dateMatch) {
+          date = dateMatch[1];
+        }
+      } catch (e) {
+        // 忽略錯誤
+      }
+    }
+    
+    // 處理 caption（增加長度以顯示更多文字，約5行）
+    const captionSnippet = (post.caption || '').substring(0, 250).replace(/\n/g, ' ');
     
     return {
       postId: `${post.brand}_${index}`,
