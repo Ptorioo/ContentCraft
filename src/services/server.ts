@@ -17,6 +17,7 @@ import {
   getDecileAnalysisForPresentation,
   getEngagementScalingCheck,
   getTailOutlierPosts,
+  getHighATIPosts,
   getEngagementTailAnalysis,
   calculateCorrelationForWeight,
 } from './brandAnalysisService.js';
@@ -259,7 +260,9 @@ app.get('/api/market/correlation', async (req, res) => {
 app.get('/api/market/deciles', async (req, res) => {
   try {
     // 使用展示專用版本：ATI 越高的貼文，互動率逐項乘以 0.9
+    console.log('[API] /api/market/deciles called');
     const deciles = await getDecileAnalysisForPresentation();
+    console.log(`[API] /api/market/deciles returning ${deciles.length} deciles`);
     return res.json({ deciles });
   } catch (err: any) {
     console.error('deciles error:', err);
@@ -301,6 +304,20 @@ app.get('/api/market/tail-outliers', async (req, res) => {
     return res.json({ outliers });
   } catch (err: any) {
     console.error('tail outliers error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/market/high-ati-posts - 取得高同質化貼文（ATI 最高的貼文）
+app.get('/api/market/high-ati-posts', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 10;
+    console.log(`[API] /api/market/high-ati-posts called with limit=${limit}`);
+    const posts = await getHighATIPosts(limit);
+    console.log(`[API] /api/market/high-ati-posts returning ${posts.length} posts`);
+    return res.json({ posts });
+  } catch (err: any) {
+    console.error('high ATI posts error:', err);
     return res.status(500).json({ error: err?.message ?? String(err) });
   }
 });
