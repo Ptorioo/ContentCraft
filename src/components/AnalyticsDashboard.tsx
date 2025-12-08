@@ -1,10 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import {
   AnalyticsDataset,
-  BrandRiskMetric,
   TailOutlierPost,
 } from '../types/analytics';
-import { ArrowLeft, TrendingUp, AlertTriangle, Sparkles, BarChart3, Map } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Sparkles, BarChart3, Map } from 'lucide-react';
 import BrandDashboard from './BrandDashboard';
 import MarketMap from './MarketMap';
 import { formatBrandName } from '../utils/brandNames';
@@ -32,58 +31,14 @@ interface AnalyticsDashboardProps {
 }
 
 
-const RiskTable: React.FC<{
-  title: string;
-  description: string;
-  rows: BrandRiskMetric[];
-}> = ({ title, description, rows }) => (
-  <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-    <div className="flex items-center justify-between mb-4">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        <p className="text-sm text-gray-500">{description}</p>
-      </div>
-      <AlertTriangle className="text-amber-500" size={20} />
-    </div>
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-sm">
-        <thead className="text-gray-500 uppercase text-xs">
-          <tr>
-            <th className="text-left pb-2">品牌</th>
-            <th className="text-right pb-2">ATI</th>
-            <th className="text-right pb-2">Novelty</th>
-            <th className="text-right pb-2">Diversity</th>
-            <th className="text-right pb-2">貼文數</th>
-            <th className="text-right pb-2">追蹤數</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {rows.map((row) => (
-            <tr key={row.brandId} className="hover:bg-gray-50">
-              <td className="py-3 font-medium text-gray-900">{formatBrandName(row.brandName)}</td>
-              <td className="py-3 text-right text-gray-700">{row.ati.toFixed(1)}</td>
-              <td className="py-3 text-right text-gray-700">{row.novelty.toFixed(2)}</td>
-              <td className="py-3 text-right text-gray-700">{row.diversity.toFixed(2)}</td>
-              <td className="py-3 text-right text-gray-700">{row.postCount}</td>
-              <td className="py-3 text-right text-gray-700">
-                {(row.followerCount / 1000).toFixed(1)}k
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
-
 // 長尾貼文檔案夾的固定 URL（按順序對應前 6 個貼文）
 const LONG_TAIL_POST_URLS = [
-  'https://www.instagram.com/reel/DNTA_FxyWFD/',
-  'https://www.instagram.com/p/DJWP2pIyDz3/',
-  'https://www.instagram.com/reel/DL9-XPXRD23/',
-  'https://www.instagram.com/reel/DMt686DTUb5/',
-  'https://www.instagram.com/reel/DMXZt3CS7K_/',
-  'https://www.instagram.com/reel/DMxpr3LRQQD/',
+  'https://www.instagram.com/p/DO7bFB5kc0V/',
+  'https://www.instagram.com/p/DJihEgAMo6U/',
+  'https://www.instagram.com/p/DINkMW1MQ9q/',
+  'https://www.instagram.com/p/DLzNyxHhFT0/',
+  'https://www.instagram.com/p/DJYslwQBj0m/',
+  'https://www.instagram.com/p/DMwyTGpTHk4/',
 ];
 
 const OutlierList: React.FC<{ posts: Array<TailOutlierPost & { displayIndex?: number }> }> = ({ posts }) => (
@@ -140,14 +95,16 @@ const OutlierList: React.FC<{ posts: Array<TailOutlierPost & { displayIndex?: nu
             </div>
             <p className="text-xs text-gray-500">{post.date || '日期未知'}</p>
             <p className="text-sm text-gray-700 line-clamp-5 break-words">{post.captionSnippet || '無描述'}</p>
-          <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-              <span className="font-medium">ATI {ati.toFixed(1)}</span>
-              <span>❤️ {likeCount.toLocaleString()}</span>
-              <span>💬 {commentCount.toLocaleString()}</span>
+            <div className="space-y-1 text-xs text-gray-500">
+              <div className="font-medium">ATI {ati.toFixed(1)}</div>
+              <div>
+                <span>❤️ {likeCount.toLocaleString()}</span>
+                <span className="ml-2">💬 {commentCount.toLocaleString()}</span>
+              </div>
               {followerCount > 0 && (
-                <span className="text-gray-400">👥 {(followerCount / 1000).toFixed(0)}k</span>
+                <div className="text-gray-400">👥 {(followerCount / 1000).toFixed(0)}k</div>
               )}
-          </div>
+            </div>
         </div>
       </div>
       );
@@ -185,17 +142,113 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
   const [tailOutliers, setTailOutliers] = useState<TailOutlierPost[]>([]);
   const [loadingTailOutliers, setLoadingTailOutliers] = useState(false);
   const [summary, setSummary] = useState(data.summary);
+  const [scatterPosts, setScatterPosts] = useState<Array<{
+    postId: string;
+    brandName: string;
+    ati: number;
+    novelty: number;
+    diversity: number;
+    postCount: number;
+    followerCount: number;
+    caption?: string;
+    index: number;
+  }>>([]);
+  const [loadingScatterPosts, setLoadingScatterPosts] = useState(false);
   
-  const scatterPreview = data.noveltyDiversityScatter.slice(0, 3);
   const scatterData = useMemo(
     () =>
-      data.noveltyDiversityScatter.map((item, index) => ({
+      scatterPosts.map((item, index) => ({
         ...item,
         followerCountK: item.followerCount / 1000,
-        index, // 添加索引以便追蹤
+        index,
       })),
-    [data.noveltyDiversityScatter]
+    [scatterPosts]
   );
+
+  // 載入隨機貼文數據
+  React.useEffect(() => {
+    if (activeTab === 'overview') {
+      setLoadingScatterPosts(true);
+      fetch('http://localhost:8787/api/market/random-posts?limit=100')
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          return res.json();
+        })
+        .then(result => {
+          console.log('[AnalyticsDashboard] Random posts result:', result);
+          const posts = result.posts || [];
+          console.log('[AnalyticsDashboard] Parsed posts:', posts.length);
+          setScatterPosts(posts);
+          setLoadingScatterPosts(false);
+        })
+        .catch(err => {
+          console.error('Failed to load random posts:', err);
+          setScatterPosts([]);
+          setLoadingScatterPosts(false);
+        });
+    } else {
+      // 切換到其他 tab 時清空數據
+      setScatterPosts([]);
+    }
+  }, [activeTab]);
+
+  // 計算動態軸範圍（根據實際數據範圍，加上 10% 邊距）
+  const axisRanges = useMemo(() => {
+    if (scatterData.length === 0) {
+      return { novelty: [0, 1], diversity: [0, 1] };
+    }
+    
+    const novelties = scatterData.map(d => d.novelty);
+    const diversities = scatterData.map(d => d.diversity);
+    
+    const novMin = Math.min(...novelties);
+    const novMax = Math.max(...novelties);
+    const novRange = novMax - novMin;
+    const novPadding = novRange * 0.1;
+    
+    const divMin = Math.min(...diversities);
+    const divMax = Math.max(...diversities);
+    const divRange = divMax - divMin;
+    const divPadding = divRange * 0.1;
+    
+    return {
+      novelty: [Math.max(0, novMin - novPadding), Math.min(1, novMax + novPadding)],
+      diversity: [Math.max(0, divMin - divPadding), Math.min(1, divMax + divPadding)],
+    };
+  }, [scatterData]);
+
+  // 計算 ATI 的範圍（用於顏色映射）
+  const atiRange = useMemo(() => {
+    if (scatterData.length === 0) return { min: 0, max: 50 };
+    const atis = scatterData.map(d => d.ati);
+    return {
+      min: Math.min(...atis),
+      max: Math.max(...atis),
+    };
+  }, [scatterData]);
+
+  // 根據 ATI 值計算顏色（從藍色到紅色）
+  const getColorByAti = (ati: number): string => {
+    const normalized = (ati - atiRange.min) / (atiRange.max - atiRange.min);
+    // 使用漸層：低 ATI (藍色) -> 高 ATI (紅色)
+    if (normalized < 0.5) {
+      // 藍色到黃色
+      const t = normalized * 2;
+      const r = Math.round(34 + (255 - 34) * t);
+      const g = Math.round(197 + (193 - 197) * t);
+      const b = Math.round(220 + (7 - 220) * t);
+      return `rgb(${r}, ${g}, ${b})`;
+    } else {
+      // 黃色到紅色
+      const t = (normalized - 0.5) * 2;
+      const r = 255;
+      const g = Math.round(193 - 193 * t);
+      const b = Math.round(7 - 7 * t);
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+  };
 
   // 載入市場摘要數據（包含高風險品牌）
   React.useEffect(() => {
@@ -281,7 +334,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
       if (!active || !payload || payload.length === 0) {
         setHoveredScatterIndex(null);
       } else {
-        const point = payload[0]?.payload as BrandRiskMetric & { followerCountK: number; index?: number };
+        const point = payload[0]?.payload as { brandName: string; ati: number; novelty: number; diversity: number; followerCount: number; caption?: string; index?: number };
         if (point?.index !== undefined) {
           setHoveredScatterIndex(point.index);
         }
@@ -291,15 +344,14 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
     if (!active || !payload || payload.length === 0) {
       return null;
     }
-    const point = payload[0]?.payload as BrandRiskMetric & { followerCountK: number; index?: number };
+    const point = payload[0]?.payload as { brandName: string; ati: number; novelty: number; diversity: number; followerCount: number; caption?: string; index?: number };
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-md text-sm text-gray-700">
-        <p className="font-semibold text-gray-900">{formatBrandName(point.brandName)}</p>
-        <p>ATI {point.ati.toFixed(1)}</p>
-        <p>Novelty {point.novelty.toFixed(2)}</p>
-        <p>Diversity {point.diversity.toFixed(2)}</p>
-        <p>貼文數 {point.postCount}</p>
-        <p>追蹤數 {(point.followerCount / 1000).toFixed(1)}k</p>
+      <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-md text-sm text-gray-700 max-w-xs">
+        <p className="font-semibold text-gray-900 mb-2">ATI {point.ati.toFixed(1)}</p>
+        <p className="text-xs text-gray-500 mb-1">Novelty {point.novelty.toFixed(2)} · Diversity {point.diversity.toFixed(2)}</p>
+        <p className="text-xs text-gray-700 mt-2 leading-relaxed">
+          {point.caption || '（無文字內容）'}
+        </p>
       </div>
     );
   }, []);
@@ -419,12 +471,12 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                 <TrendingUp className="text-purple-500" size={20} />
               </div>
               {loadingTrend ? (
-                <div className="h-64 flex items-center justify-center text-gray-500">
+                <div className="h-72 flex items-center justify-center text-gray-500">
                   載入中...
                     </div>
               ) : marketTrend.length > 0 ? (
-                <div className="h-64 w-full" style={{ minWidth: 0, minHeight: 256 }}>
-                  <ResponsiveContainer width="100%" height={256}>
+                <div className="h-64 w-full" style={{ minWidth: 0, minHeight: 320 }}>
+                  <ResponsiveContainer width="100%" height={320}>
                     <LineChart data={marketTrend}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis 
@@ -497,7 +549,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                   </ResponsiveContainer>
                   </div>
               ) : (
-                <div className="h-64 flex items-center justify-center text-gray-500">
+                <div className="h-72 flex items-center justify-center text-gray-500">
                   無數據可用
               </div>
               )}
@@ -508,72 +560,82 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
 
             {/* Novelty × Diversity 分佈 */}
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Novelty × Diversity 分佈
-              </h3>
-              <div className="h-80 w-full mb-4" style={{ minWidth: 0, minHeight: 320 }}>
-                <ResponsiveContainer width="100%" height={320}>
-                  <ScatterChart 
-                    margin={{ top: 16, right: 16, bottom: 32, left: 16 }}
-                    onMouseLeave={() => setHoveredScatterIndex(null)}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      type="number"
-                      dataKey="novelty"
-                      name="Novelty"
-                      domain={[0, 1]}
-                      tickFormatter={(value: number) => value.toFixed(2)}
-                      label={{ value: 'Novelty', position: 'insideBottomRight', offset: -10 }}
-                    />
-                    <YAxis
-                      type="number"
-                      dataKey="diversity"
-                      name="Diversity"
-                      domain={[0, 1]}
-                      tickFormatter={(value: number) => value.toFixed(2)}
-                      label={{ value: 'Diversity', angle: -90, position: 'insideLeft', offset: 10 }}
-                    />
-                    <ZAxis dataKey="ati" range={[10, 60]} />
-                    <Tooltip 
-                      content={ScatterTooltip} 
-                      cursor={{ strokeDasharray: '3 3' }}
-                    />
-                    <Scatter 
-                      data={scatterData} 
-                      fill="#7c3aed"
-                    >
-                      {scatterData.map((_, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill="#7c3aed"
-                          fillOpacity={
-                            hoveredScatterIndex === null 
-                              ? 0.7 
-                              : hoveredScatterIndex === index 
-                                ? 0.9 
-                                : 0.15
-                          }
-                        />
-                      ))}
-                    </Scatter>
-                  </ScatterChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-2">
-                {scatterPreview.map((brand) => (
-                  <div key={brand.brandId} className="flex justify-between text-sm text-gray-700">
-                    <span className="font-medium text-gray-900">{formatBrandName(brand.brandName)}</span>
-                    <span>
-                      ATI {brand.ati.toFixed(1)} · N {brand.novelty.toFixed(2)} · D{' '}
-                      {brand.diversity.toFixed(2)}
-                    </span>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Novelty × Diversity 分佈
+                </h3>
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getColorByAti(atiRange.min) }}></div>
+                    <span>低 ATI</span>
                   </div>
-                ))}
-                <p className="text-xs text-gray-400 mt-3">
-                  共 {data.noveltyDiversityScatter.length} 個品牌樣本；圖表可使用全部資料點。
-                </p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getColorByAti(atiRange.max) }}></div>
+                    <span>高 ATI</span>
+                  </div>
+                </div>
               </div>
+              {loadingScatterPosts ? (
+                <div className="h-80 flex items-center justify-center text-gray-500">
+                  載入貼文數據中...
+                </div>
+              ) : (
+                <>
+                  <div className="h-80 w-full mb-4" style={{ minWidth: 0, minHeight: 320 }}>
+                    <ResponsiveContainer width="100%" height={320}>
+                      <ScatterChart 
+                        margin={{ top: 20, right: 20, bottom: 50, left: 50 }}
+                        onMouseLeave={() => setHoveredScatterIndex(null)}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis
+                          type="number"
+                          dataKey="novelty"
+                          name="Novelty"
+                          domain={axisRanges.novelty}
+                          tickFormatter={(value: number) => value.toFixed(3)}
+                          label={{ value: 'Novelty', position: 'bottom', offset: 10, style: { textAnchor: 'middle' } }}
+                          allowDataOverflow={false}
+                        />
+                        <YAxis
+                          type="number"
+                          dataKey="diversity"
+                          name="Diversity"
+                          domain={axisRanges.diversity}
+                          tickFormatter={(value: number) => value.toFixed(3)}
+                          label={{ value: 'Diversity', angle: -90, position: 'left', offset: 15, style: { textAnchor: 'middle' } }}
+                          allowDataOverflow={false}
+                        />
+                        <ZAxis dataKey="ati" range={[10, 60]} />
+                        <Tooltip 
+                          content={ScatterTooltip} 
+                          cursor={{ strokeDasharray: '3 3' }}
+                        />
+                        <Scatter 
+                          data={scatterData}
+                        >
+                          {scatterData.map((point, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={getColorByAti(point.ati)}
+                              fillOpacity={
+                                hoveredScatterIndex === null 
+                                  ? 0.7 
+                                  : hoveredScatterIndex === index 
+                                    ? 1.0 
+                                    : 0.2
+                              }
+                            />
+                          ))}
+                        </Scatter>
+                      </ScatterChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-3">
+                    共 {scatterPosts.length} 篇隨機挑選的貼文樣本；圖表可使用全部資料點。
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
@@ -589,35 +651,15 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
               {loadingTailOutliers ? (
                 <div className="text-gray-500 text-sm">載入中...</div>
               ) : tailOutliers.length > 0 ? (
-                <OutlierList posts={[
-                  tailOutliers[0],  // 第1篇
-                  tailOutliers[1],  // 第2篇
-                  tailOutliers[3],  // 第4篇（跳過第3篇）
-                  tailOutliers[4],  // 第5篇
-                  tailOutliers[5],  // 第6篇
-                  tailOutliers[6],  // 第7篇
-                ].filter(Boolean).map((post, displayIndex) => ({
+                <OutlierList posts={tailOutliers.slice(0, 6).map((post, index) => ({
                   ...post,
-                  displayIndex: displayIndex < 2 ? displayIndex + 1 : displayIndex + 2, // 第1、2篇顯示1、2，之後顯示4、5、6、7
+                  displayIndex: index + 1,
                 }))} />
               ) : (
                 <div className="text-gray-500 text-sm">無數據可用</div>
               )}
             </div>
           </div>
-        </section>
-
-        <section className="grid gap-6 lg:grid-cols-2">
-          <RiskTable
-            title="High Risk（Average Trap）品牌"
-            description="連續趨近平均，需建議差異化策略"
-            rows={data.topHighRiskBrands}
-          />
-          <RiskTable
-            title="Resilient（保持差異）品牌"
-            description="Novelty 與 Diversity 均衡，值得作為標竿"
-            rows={data.resilientBrands}
-          />
         </section>
 
         {activeCase && (
@@ -673,17 +715,24 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                     rel="noopener noreferrer"
                     className="block border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
                   >
-                    {activeCase.baseline.imageUrl ? (
-                      <img
-                        src={activeCase.baseline.imageUrl}
-                        alt={activeCase.brandName}
-                        className="w-full h-48 object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
-                        <Sparkles className="text-purple-500" size={28} />
-                      </div>
-                    )}
+                    {(() => {
+                      // 根據案例索引決定顯示的圖片
+                      const caseIndex = data.caseStudies.findIndex(cs => cs.brandId === activeCase.brandId);
+                      const imagePath = caseIndex === 0 ? '/figs/fig1.png' : '/figs/fig2.png';
+                      return activeCase.baseline.imageUrl ? (
+                        <img
+                          src={activeCase.baseline.imageUrl}
+                          alt={activeCase.brandName}
+                          className="w-full h-48 object-cover"
+                        />
+                      ) : (
+                        <img
+                          src={imagePath}
+                          alt={activeCase.brandName}
+                          className="w-full h-48 object-cover"
+                        />
+                      );
+                    })()}
                     <div className="p-4 space-y-2 text-sm text-gray-700">
                       <p className="text-xs text-gray-500">{activeCase.baseline.date}</p>
                       <p className="font-medium text-gray-900">{activeCase.baseline.captionSnippet}</p>
@@ -699,17 +748,24 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                   </a>
                 ) : (
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    {activeCase.baseline.imageUrl ? (
-                      <img
-                        src={activeCase.baseline.imageUrl}
-                        alt={activeCase.brandName}
-                        className="w-full h-48 object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
-                        <Sparkles className="text-purple-500" size={28} />
-                      </div>
-                    )}
+                    {(() => {
+                      // 根據案例索引決定顯示的圖片
+                      const caseIndex = data.caseStudies.findIndex(cs => cs.brandId === activeCase.brandId);
+                      const imagePath = caseIndex === 0 ? '/figs/fig1.png' : '/figs/fig2.png';
+                      return activeCase.baseline.imageUrl ? (
+                        <img
+                          src={activeCase.baseline.imageUrl}
+                          alt={activeCase.brandName}
+                          className="w-full h-48 object-cover"
+                        />
+                      ) : (
+                        <img
+                          src={imagePath}
+                          alt={activeCase.brandName}
+                          className="w-full h-48 object-cover"
+                        />
+                      );
+                    })()}
                     <div className="p-4 space-y-2 text-sm text-gray-700">
                       <p className="text-xs text-gray-500">{activeCase.baseline.date}</p>
                       <p className="font-medium text-gray-900">{activeCase.baseline.captionSnippet}</p>
@@ -781,7 +837,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
         <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">分箱（Decile）分析</h3>
           <p className="text-sm text-gray-500 mb-4">
-            將 ATI 值範圍分成 10 個等距區間，檢視每個分箱的貼文數量和平均互動率
+            將 ATI 值範圍分成 10 個等距區間，檢視每個分箱的貼文數量
           </p>
           {loadingDeciles ? (
             <div className="h-96 flex items-center justify-center text-gray-500">
@@ -842,7 +898,6 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                     <p className="font-semibold text-gray-900">第 {decile.decile} 箱</p>
                     <p className="text-gray-600 mt-1">ATI 範圍: {decile.atiMin.toFixed(1)} - {decile.atiMax.toFixed(1)}</p>
                     <p className="text-gray-600">平均 ATI: {decile.atiMean.toFixed(1)}</p>
-                    <p className="text-gray-600">互動: {decile.engagementMean.toFixed(4)}</p>
                     <p className="text-gray-500 text-xs mt-1">{decile.postCount} 篇</p>
                   </div>
                 ))}

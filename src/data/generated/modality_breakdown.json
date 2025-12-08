@@ -1,21 +1,21 @@
 {
   "text": {
-    "ati": 21.58,
-    "novelty": 0.4278,
-    "diversity": 0.8789,
-    "engagementWeight": 0.4806
+    "ati": 34.91,
+    "novelty": 0.389,
+    "diversity": 0.9127,
+    "engagementWeight": 0.6057
   },
   "image": {
-    "ati": 63.14,
-    "novelty": 0.3686,
-    "diversity": 0.8746,
-    "engagementWeight": 0.2309
+    "ati": 29.38,
+    "novelty": 0.3891,
+    "diversity": 0.8771,
+    "engagementWeight": 0.3943
   },
   "metadata": {
-    "ati": 86.26,
-    "novelty": 0.4694,
-    "diversity": 0.1374,
-    "engagementWeight": 0.2885
+    "ati": 0.0,
+    "novelty": 0.0,
+    "diversity": 0.0,
+    "engagementWeight": 0.0
   },
-  "combinedAti": 42.06
+  "combinedAti": 29.38
 }

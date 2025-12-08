@@ -13,7 +13,6 @@ export const brandNameMap: Record<string, string> = {
   'happylemon_tw': '快樂檸檬',
   'mr.wish_tw': 'Mr.Wish',
   'cocotea.tw': '都可茶飲',
-  'lagmilktea': 'lagmilktea',
   'itso_tw': '一芳',
   'hanlin.tea': '翰林茶館',
   'daming_tea': '大茗',
@@ -68,6 +67,14 @@ export const brandNameMap: Record<string, string> = {
   'lagmilktea': 'LAG累擱',
   'y.j_coffee': '玉津咖啡',
   'topup.tw': '序序茶',
+  'aniceholiday_tea': '一沐日',
+  'chaforteatw': '天仁喫茶趣',
+  'dayungs_official': '大苑子',
+  'guiji_official': '龜記',
+  'kungfutea_tw': '功夫茶',
+  'sunbaytea': '山焙',
+  'super.milk.tea': '顏太煮奶茶',
+  't4_global': 'T4清茶達人',
 };
 
 /**

@@ -1,10 +1,10 @@
 {
   "timeframeLabel": "2025/04 – 2025/09",
-  "totalBrands": 61,
-  "totalPosts": 763,
-  "avgAti": 42.06,
+  "totalBrands": 63,
+  "totalPosts": 2197,
+  "avgAti": 29.38,
   "highRiskBrandCount": 6,
-  "highRiskThreshold": 47.1,
+  "highRiskThreshold": 34.4,
   "highRiskDefinition": "Top 10% ATI_final_mean across brands",
-  "lastUpdated": "2025-11-11T15:16:59.898334+00:00"
+  "lastUpdated": "2025-12-08T18:38:41.471469+00:00"
 }

@@ -4,15 +4,25 @@ import path from 'path';
 
 const ROOT = process.cwd();
 const BRAND_AGG_CSV = path.resolve(ROOT, 'src/model/outputs/ati_test_brand_agg.csv');
-// 優先使用優化版 CSV（更快），如果不存在則使用原始版本
+// 優先使用結果目錄的 CSV（完整數據），如果不存在則使用 model/outputs
+const RESULTS_DIR = path.resolve(ROOT, '結果');
+const PER_POST_CSV_RESULTS = path.resolve(RESULTS_DIR, 'ati_test_per_post.csv');
+const TRAIN_POST_CSV_RESULTS = path.resolve(RESULTS_DIR, 'ati_train_per_post.csv');
 const PER_POST_CSV_OPTIMIZED = path.resolve(ROOT, 'src/model/outputs/ati_test_per_post_optimized.csv');
-const PER_POST_CSV = fs.existsSync(PER_POST_CSV_OPTIMIZED) 
-  ? PER_POST_CSV_OPTIMIZED 
-  : path.resolve(ROOT, 'src/model/outputs/ati_test_per_post.csv');
+const PER_POST_CSV = fs.existsSync(PER_POST_CSV_RESULTS)
+  ? PER_POST_CSV_RESULTS
+  : (fs.existsSync(PER_POST_CSV_OPTIMIZED) 
+      ? PER_POST_CSV_OPTIMIZED 
+      : path.resolve(ROOT, 'src/model/outputs/ati_test_per_post.csv'));
 const TRAIN_POST_CSV_OPTIMIZED = path.resolve(ROOT, 'src/model/outputs/ati_train_per_post_optimized.csv');
-const TRAIN_POST_CSV = fs.existsSync(TRAIN_POST_CSV_OPTIMIZED)
-  ? TRAIN_POST_CSV_OPTIMIZED
-  : path.resolve(ROOT, 'src/model/outputs/ati_train_per_post.csv');
+const TRAIN_POST_CSV = fs.existsSync(TRAIN_POST_CSV_RESULTS)
+  ? TRAIN_POST_CSV_RESULTS
+  : (fs.existsSync(TRAIN_POST_CSV_OPTIMIZED)
+      ? TRAIN_POST_CSV_OPTIMIZED
+      : path.resolve(ROOT, 'src/model/outputs/ati_train_per_post.csv'));
+// Embedding-based 品牌定位圖資料
+const EMBEDDING_BASED_MAP_JSON = path.resolve(ROOT, 'src/data/generated/embedding_based_map.json');
+const ATI_AWARE_MAP_JSON = path.resolve(ROOT, 'src/data/generated/ati_aware_map.json');
 
 interface BrandAggData {
   brand: string;
@@ -459,6 +469,7 @@ function parseCSV<T extends Record<string, any>>(filePath: string): Promise<T[]>
       const results: T[] = [];
       let currentLine = '';
       let inQuotes = false;
+      let skipCount = 0;
       
       for (let i = firstNewline + 1; i < content.length; i++) {
         const char = content[i];
@@ -467,35 +478,53 @@ function parseCSV<T extends Record<string, any>>(filePath: string): Promise<T[]>
           inQuotes = !inQuotes;
           currentLine += char;
         } else if (char === '\n' && !inQuotes) {
-          // 遇到行尾換行，且不在引號內，表示一行結束
-          const values = parseCSVLine(currentLine);
-          if (values.length === headerCount) {
-            const obj: any = {};
-            headers.forEach((header, idx) => {
-              obj[header] = values[idx] || '';
-            });
-            results.push(obj as T);
-          } else {
-            // console.warn(`Skipping malformed line (column count mismatch): ${currentLine}`);
+          // 這是一個完整的行
+          if (currentLine.trim()) {
+            const values = parseCSVLine(currentLine);
+            // 允許欄位數量有 1 的誤差（處理尾隨逗號或缺失欄位）
+            if (values.length >= headerCount - 1 && values.length <= headerCount + 1) {
+              const obj: any = {};
+              headers.forEach((header, idx) => {
+                obj[header] = values[idx] || '';
+              });
+              // 如果欄位不足，補上空字串
+              while (values.length < headerCount) {
+                values.push('');
+              }
+              results.push(obj as T);
+            } else {
+              skipCount++;
+              // 只在開發時顯示前幾個被跳過的行
+              if (skipCount <= 5) {
+                console.warn(`[parseCSV] Skipping row with ${values.length} columns (expected ${headerCount}): ${currentLine.substring(0, 100)}...`);
+              }
+            }
           }
           currentLine = '';
         } else {
           currentLine += char;
         }
       }
+      
       // 處理最後一行
-      if (currentLine.trim().length > 0) {
+      if (currentLine.trim()) {
         const values = parseCSVLine(currentLine);
-        if (values.length === headerCount) {
+        if (values.length >= headerCount - 1 && values.length <= headerCount + 1) {
           const obj: any = {};
           headers.forEach((header, idx) => {
             obj[header] = values[idx] || '';
           });
           results.push(obj as T);
         } else {
-          // console.warn(`Skipping malformed last line (column count mismatch): ${currentLine}`);
+          skipCount++;
         }
       }
+      
+      if (skipCount > 0) {
+        console.warn(`[parseCSV] ${filePath}: Skipped ${skipCount} rows due to column count mismatch`);
+      }
+      
+      console.log(`[parseCSV] ${filePath}: Loaded ${results.length} rows`);
       
       resolve(results);
     } catch (error) {
@@ -507,7 +536,7 @@ function parseCSV<T extends Record<string, any>>(filePath: string): Promise<T[]>
 
 async function loadBrandData(): Promise<BrandAggData[]> {
   try {
-    // 優先從 novelty_diversity_scatter.json 讀取（與總覽分析一致，包含全部 61 個品牌）
+    // 優先從 novelty_diversity_scatter.json 讀取（與總覽分析一致，包含全部品牌）
     const SCATTER_JSON = path.resolve(ROOT, 'src/data/generated/novelty_diversity_scatter.json');
     
     if (fs.existsSync(SCATTER_JSON)) {
@@ -637,16 +666,87 @@ async function loadBrandData(): Promise<BrandAggData[]> {
   }
 }
 
-// 取得市場地圖數據（只支援品牌定位圖）
+// 取得市場地圖數據（使用 embedding-based 方法）
 export async function getMarketMapData(method: 'positioning' = 'positioning'): Promise<{
   points: BrandPoint[];
   clusters: number;
   method: string;
+  reduction_method?: string;
+  explained_variance?: number;
+  strategy?: string;
+  ati_distance_correlation?: number;
+  ati_cluster_distance_correlation?: number;
 }> {
+  // 優先使用 ATI-aware 的資料（如果存在）
+  if (fs.existsSync(ATI_AWARE_MAP_JSON)) {
+    try {
+      const atiAwareData = JSON.parse(
+        fs.readFileSync(ATI_AWARE_MAP_JSON, 'utf-8')
+      );
+      
+      const points: BrandPoint[] = atiAwareData.brands.map((b: any) => ({
+        brand: b.brand,
+        x: b.x,
+        y: b.y,
+        ati: b.ATI_final_mean,
+        ds: b.DS_final_mean,
+        y_mean: b.y_mean,
+        n_posts: b.n_posts,
+        cluster: b.cluster,
+      }));
+      
+      return {
+        points,
+        clusters: atiAwareData.n_clusters,
+        method: 'ati_aware',
+        reduction_method: atiAwareData.reduction_method || 'unknown',
+        explained_variance: atiAwareData.ati_distance_correlation || 0,
+        strategy: atiAwareData.strategy || 'unknown',
+        ati_distance_correlation: atiAwareData.ati_distance_correlation || 0,
+        ati_cluster_distance_correlation: atiAwareData.ati_cluster_distance_correlation || undefined,
+      };
+    } catch (error) {
+      console.error('[MarketMap] Error loading ATI-aware map, falling back to embedding-based:', error);
+    }
+  }
+  
+  // 其次使用 embedding-based 的資料
+  if (fs.existsSync(EMBEDDING_BASED_MAP_JSON)) {
+    try {
+      const embeddingData = JSON.parse(
+        fs.readFileSync(EMBEDDING_BASED_MAP_JSON, 'utf-8')
+      );
+      
+      // 轉換為 BrandPoint 格式
+      const points: BrandPoint[] = embeddingData.brands.map((b: any) => ({
+        brand: b.brand,
+        x: b.x, // Embedding-based PCA 座標 X
+        y: b.y, // Embedding-based PCA 座標 Y
+        ati: b.ATI_final_mean,
+        ds: b.DS_final_mean,
+        y_mean: b.y_mean,
+        n_posts: b.n_posts,
+        cluster: b.cluster,
+      }));
+      
+      return {
+        points,
+        clusters: embeddingData.n_clusters,
+        method: 'embedding_based',
+        reduction_method: embeddingData.reduction_method || 'PCA',
+        explained_variance: embeddingData.explained_variance || 0,
+      };
+    } catch (error) {
+      console.error('[MarketMap] Error loading embedding-based map, falling back to legacy method:', error);
+      // 如果載入失敗，回退到舊方法
+    }
+  }
+  
+  // 回退方案：使用原本的 ATI/DS 方法
   const brands = await loadBrandData();
   
   if (brands.length === 0) {
-    return { points: [], clusters: 0, method };
+    return { points: [], clusters: 0, method: 'legacy' };
   }
   
   // 品牌定位圖：直接使用 DS 和 ATI，不標準化
@@ -660,9 +760,7 @@ export async function getMarketMapData(method: 'positioning' = 'positioning'): P
     n_posts: b.n_posts,
   }));
   
-  // 使用基於 embedding 的聚類（更準確）
-  // 使用 12 維特徵（text/image/meta 的 ATI, DS, Novelty, Diversity）進行聚類
-  // 而不是只用 2 維（ATI, DS），這樣可以捕捉更豐富的品牌特徵
+  // 使用基於 embedding 的聚類（使用原始 12 維特徵）
   const posts = await loadPostDataForClustering();
   const clusters = await clusterBrandsByEmbedding(brands, posts, 4);
   
@@ -674,39 +772,96 @@ export async function getMarketMapData(method: 'positioning' = 'positioning'): P
   return {
     points: pointsWithClusters,
     clusters: 4,
-    method: 'positioning',
+    method: 'legacy',
   };
 }
 
 // 取得市場統計（用於顯示）
 export async function getMarketMapStats() {
+  // 直接使用與 brandAnalysisService 相同的邏輯來計算 ATI
+  // 這樣可以確保一致性
   const brands = await loadBrandData();
   
-  if (brands.length === 0) {
-    return {
-      totalBrands: 0,
-      avgAti: 0,
-      avgDs: 0,
-      convergenceIndex: 0,
-    };
+  // 載入貼文數據（與 brandAnalysisService 使用相同的路徑）
+  const testPosts = await parseCSV<any>(PER_POST_CSV);
+  let trainPosts: any[] = [];
+  if (fs.existsSync(TRAIN_POST_CSV)) {
+    trainPosts = await parseCSV<any>(TRAIN_POST_CSV);
+  }
+  const allPosts = [...trainPosts, ...testPosts];
+  
+  // 調試：檢查數據量
+  console.log(`[MarketMap] Loaded ${testPosts.length} test posts, ${trainPosts.length} train posts, total: ${allPosts.length}`);
+  
+  // 使用貼文層級的平均 ATI（與 getMarketStats 保持一致）
+  // 過濾無效數據（ATI 應該在合理範圍內）
+  const validPosts = allPosts.filter((p: any) => {
+    const atiStr = String(p.ATI_final || p['ATI_final'] || '0').trim();
+    const ati = parseFloat(atiStr);
+    return !isNaN(ati) && ati > 0 && ati < 100;
+  });
+  
+  console.log(`[MarketMap] Valid posts: ${validPosts.length} out of ${allPosts.length}`);
+  
+  const avgAtiFromPosts = validPosts.length > 0
+    ? validPosts.reduce((sum: number, p: any) => {
+        const atiStr = String(p.ATI_final || p['ATI_final'] || '0').trim();
+        const ati = parseFloat(atiStr) || 0;
+        return sum + ati;
+      }, 0) / validPosts.length
+    : 0;
+  
+  console.log(`[MarketMap] Calculated avgAtiFromPosts: ${avgAtiFromPosts.toFixed(2)}`);
+  
+  // 品牌層級的平均（用於其他統計）
+  const avgAtiFromBrands = brands.length > 0
+    ? brands.reduce((sum, b) => sum + b.ATI_final_mean, 0) / brands.length
+    : 0;
+  
+  // 使用貼文層級的平均 ATI（與總覽一致）
+  const avgAti = avgAtiFromPosts > 0 ? avgAtiFromPosts : avgAtiFromBrands;
+  const avgDs = brands.length > 0
+    ? brands.reduce((sum, b) => sum + b.DS_final_mean, 0) / brands.length
+    : 0;
+  
+  // 取得趨同度指數（優先從 embedding-based 或 ATI-aware 地圖）
+  let convergenceIndex = 0;
+  if (fs.existsSync(ATI_AWARE_MAP_JSON)) {
+    try {
+      const atiAwareData = JSON.parse(
+        fs.readFileSync(ATI_AWARE_MAP_JSON, 'utf-8')
+      );
+      convergenceIndex = atiAwareData.convergence_index || atiAwareData.convergenceIndex || 0;
+    } catch (error) {
+      console.error('[MarketMap] Error loading ATI-aware convergence index:', error);
+    }
+  } else if (fs.existsSync(EMBEDDING_BASED_MAP_JSON)) {
+    try {
+      const embeddingData = JSON.parse(
+        fs.readFileSync(EMBEDDING_BASED_MAP_JSON, 'utf-8')
+      );
+      convergenceIndex = embeddingData.convergence_index || embeddingData.convergenceIndex || 0;
+    } catch (error) {
+      console.error('[MarketMap] Error loading embedding-based convergence index:', error);
+    }
   }
   
-  const avgAti = brands.reduce((sum, b) => sum + b.ATI_final_mean, 0) / brands.length;
-  const avgDs = brands.reduce((sum, b) => sum + b.DS_final_mean, 0) / brands.length;
-  
-  // 計算趨同度（ATI 的標準差，越小越趨同）
-  const atiStd = Math.sqrt(
-    brands.reduce((sum, b) => sum + Math.pow(b.ATI_final_mean - avgAti, 2), 0) / brands.length
-  );
-  
-  const convergenceIndex = 100 - (atiStd / avgAti * 100);
+  // 如果沒有從 JSON 取得，則計算（使用品牌層級）
+  if (convergenceIndex === 0) {
+    const atiStd = Math.sqrt(
+      brands.reduce((sum, b) => sum + Math.pow(b.ATI_final_mean - avgAtiFromBrands, 2), 0) / brands.length
+    );
+    convergenceIndex = Math.max(0, Math.min(100, 100 - (atiStd / avgAtiFromBrands * 100)));
+  }
   
   return {
     totalBrands: brands.length,
     avgAti,
     avgDs,
-    convergenceIndex: Math.max(0, Math.min(100, convergenceIndex)),
-    atiStd,
+    convergenceIndex,
+    atiStd: 0,
+    method: 'embedding_based',
   };
 }
+
 

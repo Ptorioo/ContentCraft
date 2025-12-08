@@ -10,7 +10,8 @@ from typing import Dict, List, Tuple
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 RESULTS_DIR = ROOT_DIR / "結果"
-PER_POST_PATH = RESULTS_DIR / "ati_test_per_post.csv"
+PER_POST_PATH_TEST = RESULTS_DIR / "ati_test_per_post.csv"
+PER_POST_PATH_TRAIN = RESULTS_DIR / "ati_train_per_post.csv"
 BRAND_AGG_PATH = RESULTS_DIR / "ati_test_brand_agg.csv"
 OUTPUT_DIR = ROOT_DIR / "src" / "data" / "generated"
 SUMMARY_PATH = OUTPUT_DIR / "summary.json"
@@ -87,43 +88,90 @@ def clean_snippet(value: str, max_length: int = 120) -> str:
 
 def load_posts() -> List[PostRecord]:
   posts: List[PostRecord] = []
-  with PER_POST_PATH.open(newline="", encoding="utf-8") as f:
-    reader = csv.DictReader(f)
-    for idx, row in enumerate(reader):
-      text_nov = safe_float(row.get("text_nov"))
-      image_nov = safe_float(row.get("image_nov"))
-      meta_nov = safe_float(row.get("meta_nov"))
-      text_div = safe_float(row.get("text_div"))
-      image_div = safe_float(row.get("image_div"))
-      meta_div = safe_float(row.get("meta_div"))
-      novelty = fmean([text_nov, image_nov, meta_nov])
-      diversity = fmean([text_div, image_div, meta_div])
+  post_counter = 0
+  
+  # 先載入測試集
+  if PER_POST_PATH_TEST.exists():
+    with PER_POST_PATH_TEST.open(newline="", encoding="utf-8") as f:
+      reader = csv.DictReader(f)
+      for row in reader:
+        text_nov = safe_float(row.get("text_nov"))
+        image_nov = safe_float(row.get("image_nov"))
+        meta_nov = safe_float(row.get("meta_nov"))
+        text_div = safe_float(row.get("text_div"))
+        image_div = safe_float(row.get("image_div"))
+        meta_div = safe_float(row.get("meta_div"))
+        novelty = fmean([text_nov, image_nov, meta_nov])
+        diversity = fmean([text_div, image_div, meta_div])
 
-      posts.append(
-        PostRecord(
-          post_id=f"{row['brand']}_{idx:05d}",
-          brand=row["brand"],
-          ati=safe_float(row.get("ATI_final")),
-          text_ati=safe_float(row.get("text_ATI")),
-          image_ati=safe_float(row.get("image_ATI")),
-          meta_ati=safe_float(row.get("meta_ATI")),
-          novelty=novelty,
-          diversity=diversity,
-          text_nov=text_nov,
-          image_nov=image_nov,
-          meta_nov=meta_nov,
-          text_div=text_div,
-          image_div=image_div,
-          meta_div=meta_div,
-          likes=safe_int(row.get("count_like")),
-          comments=safe_int(row.get("count_comment")),
-          followers=safe_float(row.get("followers")),
-          y=safe_float(row.get("y")),
-          caption=clean_text(row.get("caption")),
-          ocr_text=clean_text(row.get("ocr_text")),
-          is_late_entry=row.get("is_late_entry_brand") == "1",
+        posts.append(
+          PostRecord(
+            post_id=f"{row['brand']}_{post_counter:05d}",
+            brand=row["brand"],
+            ati=safe_float(row.get("ATI_final")),
+            text_ati=safe_float(row.get("text_ATI")),
+            image_ati=safe_float(row.get("image_ATI")),
+            meta_ati=safe_float(row.get("meta_ATI")),
+            novelty=novelty,
+            diversity=diversity,
+            text_nov=text_nov,
+            image_nov=image_nov,
+            meta_nov=meta_nov,
+            text_div=text_div,
+            image_div=image_div,
+            meta_div=meta_div,
+            likes=safe_int(row.get("count_like")),
+            comments=safe_int(row.get("count_comment")),
+            followers=safe_float(row.get("followers")),
+            y=safe_float(row.get("y")),
+            caption=clean_text(row.get("caption")),
+            ocr_text=clean_text(row.get("ocr_text")),
+            is_late_entry=row.get("is_late_entry_brand") == "1",
+          )
         )
-      )
+        post_counter += 1
+  
+  # 再載入訓練集
+  if PER_POST_PATH_TRAIN.exists():
+    with PER_POST_PATH_TRAIN.open(newline="", encoding="utf-8") as f:
+      reader = csv.DictReader(f)
+      for row in reader:
+        text_nov = safe_float(row.get("text_nov"))
+        image_nov = safe_float(row.get("image_nov"))
+        meta_nov = safe_float(row.get("meta_nov"))
+        text_div = safe_float(row.get("text_div"))
+        image_div = safe_float(row.get("image_div"))
+        meta_div = safe_float(row.get("meta_div"))
+        novelty = fmean([text_nov, image_nov, meta_nov])
+        diversity = fmean([text_div, image_div, meta_div])
+
+        posts.append(
+          PostRecord(
+            post_id=f"{row['brand']}_{post_counter:05d}",
+            brand=row["brand"],
+            ati=safe_float(row.get("ATI_final")),
+            text_ati=safe_float(row.get("text_ATI")),
+            image_ati=safe_float(row.get("image_ATI")),
+            meta_ati=safe_float(row.get("meta_ATI")),
+            novelty=novelty,
+            diversity=diversity,
+            text_nov=text_nov,
+            image_nov=image_nov,
+            meta_nov=meta_nov,
+            text_div=text_div,
+            image_div=image_div,
+            meta_div=meta_div,
+            likes=safe_int(row.get("count_like")),
+            comments=safe_int(row.get("count_comment")),
+            followers=safe_float(row.get("followers")),
+            y=safe_float(row.get("y")),
+            caption=clean_text(row.get("caption")),
+            ocr_text=clean_text(row.get("ocr_text")),
+            is_late_entry=0,  # 訓練集沒有 is_late_entry_brand 欄位
+          )
+        )
+        post_counter += 1
+  
   return posts
 
 
@@ -133,33 +181,41 @@ def read_per_post_stats(posts: List[PostRecord]) -> Tuple[int, float]:
   return len(posts), fmean([post.ati for post in posts])
 
 
-def read_brand_stats() -> Tuple[int, int, float]:
-  with BRAND_AGG_PATH.open(newline="", encoding="utf-8") as f:
-    reader = csv.DictReader(f)
-    ati_values: List[float] = []
-    for row in reader:
-      value = row.get("ATI_final_mean")
-      if value:
-        try:
-          ati_values.append(float(value))
-        except ValueError:
-          continue
-
-  if not ati_values:
-    raise ValueError("No ATI_final_mean values found in ati_test_brand_agg.csv")
-
-  brand_count = len(ati_values)
-  sorted_values = sorted(ati_values, reverse=True)
+def read_brand_stats(posts: List[PostRecord]) -> Tuple[int, int, float]:
+  # 從全部貼文資料計算品牌數和統計，而不是只從 brand_agg CSV
+  # 這樣可以確保與 scatter 資料一致
+  brand_set = {post.brand for post in posts if post.brand}
+  brand_count = len(brand_set)
+  
+  # 計算每個品牌的平均 ATI（用於計算 high_risk_threshold）
+  brand_ati_map: Dict[str, List[float]] = {}
+  for post in posts:
+    if post.brand:
+      if post.brand not in brand_ati_map:
+        brand_ati_map[post.brand] = []
+      brand_ati_map[post.brand].append(post.ati)
+  
+  # 計算每個品牌的平均 ATI
+  brand_avg_atis = [
+    sum(atis) / len(atis) 
+    for atis in brand_ati_map.values() 
+    if len(atis) > 0
+  ]
+  
+  if not brand_avg_atis:
+    raise ValueError("No brand ATI values found in posts")
+  
+  sorted_values = sorted(brand_avg_atis, reverse=True)
   threshold_index = max(int(round(brand_count * 0.1)) - 1, 0)
   high_risk_threshold = sorted_values[threshold_index]
-  high_risk_brand_count = sum(value >= high_risk_threshold for value in ati_values)
+  high_risk_brand_count = sum(value >= high_risk_threshold for value in brand_avg_atis)
 
   return brand_count, high_risk_brand_count, high_risk_threshold
 
 
 def build_summary(posts: List[PostRecord]) -> SummaryStats:
   total_posts, avg_ati = read_per_post_stats(posts)
-  total_brands, high_risk_brand_count, high_risk_threshold = read_brand_stats()
+  total_brands, high_risk_brand_count, high_risk_threshold = read_brand_stats(posts)
   return SummaryStats(
     total_brands=total_brands,
     total_posts=total_posts,
@@ -398,10 +454,17 @@ def build_case_studies(posts: List[PostRecord], scatter_rows: List[dict]) -> Lis
 
 
 def main() -> None:
-  if not PER_POST_PATH.exists():
-    raise FileNotFoundError(f"Missing file: {PER_POST_PATH}")
+  if not PER_POST_PATH_TEST.exists():
+    raise FileNotFoundError(f"Missing file: {PER_POST_PATH_TEST}")
   if not BRAND_AGG_PATH.exists():
     raise FileNotFoundError(f"Missing file: {BRAND_AGG_PATH}")
+  
+  print(f"📊 載入資料...")
+  print(f"   測試集: {PER_POST_PATH_TEST}")
+  if PER_POST_PATH_TRAIN.exists():
+    print(f"   訓練集: {PER_POST_PATH_TRAIN}")
+  else:
+    print(f"   訓練集: 未找到（將只使用測試集）")
 
   OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 

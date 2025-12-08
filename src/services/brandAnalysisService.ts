@@ -3,16 +3,30 @@ import fs from 'fs';
 import path from 'path';
 
 const ROOT = process.cwd();
-const BRAND_AGG_CSV = path.resolve(ROOT, 'src/model/outputs/ati_test_brand_agg.csv');
-// 優先使用優化版 CSV（更快），如果不存在則使用原始版本
+// 品牌彙總資料也優先使用結果目錄
+const BRAND_AGG_CSV_RESULT = path.resolve(ROOT, '結果/ati_test_brand_agg.csv');
+const BRAND_AGG_CSV_OUTPUTS = path.resolve(ROOT, 'src/model/outputs/ati_test_brand_agg.csv');
+const BRAND_AGG_CSV = fs.existsSync(BRAND_AGG_CSV_RESULT)
+  ? BRAND_AGG_CSV_RESULT
+  : BRAND_AGG_CSV_OUTPUTS;
+// 優先使用結果目錄中的完整資料，如果不存在則使用 src/model/outputs 中的資料
+const PER_POST_CSV_RESULT = path.resolve(ROOT, '結果/ati_test_per_post.csv');
 const PER_POST_CSV_OPTIMIZED = path.resolve(ROOT, 'src/model/outputs/ati_test_per_post_optimized.csv');
-const PER_POST_CSV = fs.existsSync(PER_POST_CSV_OPTIMIZED) 
-  ? PER_POST_CSV_OPTIMIZED 
-  : path.resolve(ROOT, 'src/model/outputs/ati_test_per_post.csv');
+const PER_POST_CSV_OUTPUTS = path.resolve(ROOT, 'src/model/outputs/ati_test_per_post.csv');
+const PER_POST_CSV = fs.existsSync(PER_POST_CSV_RESULT)
+  ? PER_POST_CSV_RESULT
+  : fs.existsSync(PER_POST_CSV_OPTIMIZED)
+  ? PER_POST_CSV_OPTIMIZED
+  : PER_POST_CSV_OUTPUTS;
+
+const TRAIN_POST_CSV_RESULT = path.resolve(ROOT, '結果/ati_train_per_post.csv');
 const TRAIN_POST_CSV_OPTIMIZED = path.resolve(ROOT, 'src/model/outputs/ati_train_per_post_optimized.csv');
-const TRAIN_POST_CSV = fs.existsSync(TRAIN_POST_CSV_OPTIMIZED)
+const TRAIN_POST_CSV_OUTPUTS = path.resolve(ROOT, 'src/model/outputs/ati_train_per_post.csv');
+const TRAIN_POST_CSV = fs.existsSync(TRAIN_POST_CSV_RESULT)
+  ? TRAIN_POST_CSV_RESULT
+  : fs.existsSync(TRAIN_POST_CSV_OPTIMIZED)
   ? TRAIN_POST_CSV_OPTIMIZED
-  : path.resolve(ROOT, 'src/model/outputs/ati_train_per_post.csv');
+  : TRAIN_POST_CSV_OUTPUTS;
 const RAW_TEST_POSTS_CSV = path.resolve(ROOT, 'src/model/with_rel_paths_test_posts.csv');
 const RAW_TRAIN_POSTS_CSV = path.resolve(ROOT, 'src/model/with_rel_paths_train_posts.csv');
 
@@ -83,7 +97,7 @@ function parseCSV<T extends Record<string, any>>(filePath: string): Promise<T[]>
     }
     
     try {
-      // 使用更穩健的 CSV 解析方式
+      // 使用更穩健的 CSV 解析方式，處理引號內的換行
       const content = fs.readFileSync(filePath, 'utf-8');
       
       // 先找到標題行
@@ -100,6 +114,7 @@ function parseCSV<T extends Record<string, any>>(filePath: string): Promise<T[]>
       const results: T[] = [];
       let currentLine = '';
       let inQuotes = false;
+      let skipCount = 0;
       
       for (let i = firstNewline + 1; i < content.length; i++) {
         const char = content[i];
@@ -111,12 +126,23 @@ function parseCSV<T extends Record<string, any>>(filePath: string): Promise<T[]>
           // 這是一個完整的行
           if (currentLine.trim()) {
             const values = parseCSVLine(currentLine);
-            if (values.length === headerCount) {
+            // 允許欄位數量有 1 的誤差（處理尾隨逗號或缺失欄位）
+            if (values.length >= headerCount - 1 && values.length <= headerCount + 1) {
               const obj: any = {};
               headers.forEach((header, idx) => {
                 obj[header] = values[idx] || '';
               });
+              // 如果欄位不足，補上空字串
+              while (values.length < headerCount) {
+                values.push('');
+              }
               results.push(obj as T);
+            } else {
+              skipCount++;
+              // 只在開發時顯示前幾個被跳過的行
+              if (skipCount <= 5) {
+                console.warn(`[parseCSV] Skipping row with ${values.length} columns (expected ${headerCount}): ${currentLine.substring(0, 100)}...`);
+              }
             }
           }
           currentLine = '';
@@ -128,15 +154,22 @@ function parseCSV<T extends Record<string, any>>(filePath: string): Promise<T[]>
       // 處理最後一行
       if (currentLine.trim()) {
         const values = parseCSVLine(currentLine);
-        if (values.length === headerCount) {
+        if (values.length >= headerCount - 1 && values.length <= headerCount + 1) {
           const obj: any = {};
           headers.forEach((header, idx) => {
             obj[header] = values[idx] || '';
           });
           results.push(obj as T);
+        } else {
+          skipCount++;
         }
       }
       
+      if (skipCount > 0) {
+        console.warn(`[parseCSV] ${filePath}: Skipped ${skipCount} rows due to column count mismatch`);
+      }
+      
+      console.log(`[parseCSV] ${filePath}: Loaded ${results.length} rows`);
       resolve(results);
     } catch (error) {
       reject(error);
@@ -307,99 +340,37 @@ export async function loadPostData(): Promise<PostData[]> {
   }
 }
 
-// 計算品牌相似度（基於多模態 embedding）
-// 使用各模態的 ATI、DS、Novelty、Diversity 構建品牌 embedding 向量
-interface BrandEmbedding {
-  textATI: number;
-  textDS: number;
-  textNov: number;
-  textDiv: number;
-  imageATI: number;
-  imageDS: number;
-  imageNov: number;
-  imageDiv: number;
-  metaATI: number;
-  metaDS: number;
-  metaNov: number;
-  metaDiv: number;
-}
+// 載入品牌原始 CLIP embedding（1536 維：caption 512 + OCR 512 + image 512）
+let brandEmbeddingsCache: Map<string, number[]> | null = null;
 
-// 從貼文數據構建品牌 embedding（平均所有貼文的特徵）
-function buildBrandEmbedding(posts: PostData[]): BrandEmbedding | null {
-  if (posts.length === 0) return null;
+async function loadBrandEmbeddings(): Promise<Map<string, number[]>> {
+  if (brandEmbeddingsCache) return brandEmbeddingsCache;
   
-  const sum = posts.reduce((acc, p) => ({
-    textATI: acc.textATI + p.text_ATI,
-    textDS: acc.textDS + p.text_DS,
-    textNov: acc.textNov + p.text_nov,
-    textDiv: acc.textDiv + p.text_div,
-    imageATI: acc.imageATI + p.image_ATI,
-    imageDS: acc.imageDS + p.image_DS,
-    imageNov: acc.imageNov + p.image_nov,
-    imageDiv: acc.imageDiv + p.image_div,
-    metaATI: acc.metaATI + p.meta_ATI,
-    metaDS: acc.metaDS + p.meta_DS,
-    metaNov: acc.metaNov + p.meta_nov,
-    metaDiv: acc.metaDiv + p.meta_div,
-  }), {
-    textATI: 0, textDS: 0, textNov: 0, textDiv: 0,
-    imageATI: 0, imageDS: 0, imageNov: 0, imageDiv: 0,
-    metaATI: 0, metaDS: 0, metaNov: 0, metaDiv: 0,
-  });
+  const EMBEDDING_JSON = path.resolve(ROOT, 'src/data/generated/brand_embeddings.json');
   
-  const n = posts.length;
-  return {
-    textATI: sum.textATI / n,
-    textDS: sum.textDS / n,
-    textNov: sum.textNov / n,
-    textDiv: sum.textDiv / n,
-    imageATI: sum.imageATI / n,
-    imageDS: sum.imageDS / n,
-    imageNov: sum.imageNov / n,
-    imageDiv: sum.imageDiv / n,
-    metaATI: sum.metaATI / n,
-    metaDS: sum.metaDS / n,
-    metaNov: sum.metaNov / n,
-    metaDiv: sum.metaDiv / n,
-  };
-}
-
-// 將 embedding 轉換為向量（12 維）
-// 對不同量級的特徵進行標準化，使它們在相似度計算中權重相當
-function embeddingToVector(emb: BrandEmbedding): number[] {
-  // ATI 範圍約 0-100，DS 範圍約 0-1，Novelty/Diversity 範圍約 0-1
-  // 將 ATI 縮放到 0-1 範圍，使其與其他特徵量級一致
-  // 注意：如果某些特徵值完全相同（如 text_nov=0, text_div=1），會導致相似度過高
-  return [
-    emb.textATI / 100,    // 標準化 ATI 到 [0, 1]
-    emb.textDS,           // DS 已經在 [0, 1]
-    emb.textNov,          // Novelty 已經在 [0, 1]
-    emb.textDiv,          // Diversity 已經在 [0, 1]
-    emb.imageATI / 100,
-    emb.imageDS,
-    emb.imageNov,
-    emb.imageDiv,
-    emb.metaATI / 100,
-    emb.metaDS,
-    emb.metaNov,
-    emb.metaDiv,
-  ];
-}
-
-// 計算歐氏距離（用於更準確的相似度）
-function euclideanDistance(vec1: number[], vec2: number[]): number {
-  if (vec1.length !== vec2.length) return Infinity;
-  
-  let sumSquaredDiff = 0;
-  for (let i = 0; i < vec1.length; i++) {
-    const diff = vec1[i] - vec2[i];
-    sumSquaredDiff += diff * diff;
+  try {
+    if (fs.existsSync(EMBEDDING_JSON)) {
+      const data = JSON.parse(fs.readFileSync(EMBEDDING_JSON, 'utf-8'));
+      const embeddings = data.embeddings || {};
+      
+      brandEmbeddingsCache = new Map();
+      for (const [brand, embedding] of Object.entries(embeddings)) {
+        brandEmbeddingsCache.set(brand, embedding as number[]);
+      }
+      
+      console.log(`[BrandAnalysis] Loaded ${brandEmbeddingsCache.size} brand embeddings from brand_embeddings.json`);
+      return brandEmbeddingsCache;
+    } else {
+      console.warn('[BrandAnalysis] brand_embeddings.json not found, similarity calculation will return 0');
+      return new Map();
+    }
+  } catch (error) {
+    console.error('[BrandAnalysis] Error loading brand embeddings:', error);
+    return new Map();
   }
-  
-  return Math.sqrt(sumSquaredDiff);
 }
 
-// 計算餘弦相似度
+// 計算餘弦相似度（用於原始 embedding）
 function cosineSimilarity(vec1: number[], vec2: number[]): number {
   if (vec1.length !== vec2.length) return 0;
   
@@ -419,43 +390,31 @@ function cosineSimilarity(vec1: number[], vec2: number[]): number {
   return dotProduct / denominator;
 }
 
-// 計算品牌相似度（基於多模態 embedding）
+// 計算品牌相似度（基於原始 CLIP embedding）
 async function calculateBrandSimilarity(
   brand1: string,
   brand2: string,
-  allPosts: PostData[]
+  _allPosts?: PostData[]  // 保留參數以保持 API 兼容性，但不再使用
 ): Promise<number> {
-  const brand1Posts = allPosts.filter(p => p.brand === brand1);
-  const brand2Posts = allPosts.filter(p => p.brand === brand2);
+  // 載入品牌 embedding
+  const embeddings = await loadBrandEmbeddings();
   
-  if (brand1Posts.length === 0 || brand2Posts.length === 0) {
-    return 0;
-  }
-  
-  const emb1 = buildBrandEmbedding(brand1Posts);
-  const emb2 = buildBrandEmbedding(brand2Posts);
+  const emb1 = embeddings.get(brand1);
+  const emb2 = embeddings.get(brand2);
   
   if (!emb1 || !emb2) {
+    // 如果找不到 embedding，返回 0
     return 0;
   }
   
-  const vec1 = embeddingToVector(emb1);
-  const vec2 = embeddingToVector(emb2);
+  // 使用餘弦相似度計算（embedding 已經 L2 正規化）
+  // 餘弦相似度範圍在 -1 到 1，但對於正規化的 embedding 通常在 0 到 1 之間
+  // 我們將其轉換為 0-1 範圍（如果為負則設為 0）
+  const similarity = cosineSimilarity(emb1, emb2);
   
-  // 使用歐氏距離計算相似度（更準確反映差異）
-  // 先計算距離，然後轉換為相似度
-  const distance = euclideanDistance(vec1, vec2);
-  
-  // 使用高斯相似度函數：exp(-distance^2 / (2 * sigma^2))
-  // sigma 設為 0.18，讓相似度分布在 75-85% 的理想範圍
-  // 當距離 = 0.1 時，相似度 ≈ 0.85
-  // 當距離 = 0.12 時，相似度 ≈ 0.80
-  // 當距離 = 0.15 時，相似度 ≈ 0.72
-  // 當距離 = 0.18 時，相似度 ≈ 0.64
-  const sigma = 0.18;
-  const similarity = Math.exp(-(distance * distance) / (2 * sigma * sigma));
-  
-  return similarity;
+  // 將相似度從 [-1, 1] 轉換到 [0, 1]
+  // 對於正規化的 embedding，通常不會有負值，但為了安全起見還是處理一下
+  return Math.max(0, similarity);
 }
 
 // 找出最相似的品牌（基於多模態 embedding）
@@ -467,16 +426,32 @@ export async function getSimilarBrands(brandName: string, topK: number = 3) {
   if (!targetBrand) return [];
   if (posts.length === 0) return [];
 
+  // 載入 novelty_diversity_scatter 數據以獲取 novelty
+  const scatterDataPath = path.resolve(ROOT, 'src/data/generated/novelty_diversity_scatter.json');
+  let noveltyMap = new Map<string, number>();
+  if (fs.existsSync(scatterDataPath)) {
+    try {
+      const scatterData = JSON.parse(fs.readFileSync(scatterDataPath, 'utf-8'));
+      scatterData.forEach((item: any) => {
+        noveltyMap.set(item.brandName || item.brandId, item.novelty || 0);
+      });
+    } catch (error) {
+      console.warn('[getSimilarBrands] Could not load novelty data:', error);
+    }
+  }
+
   // 計算所有品牌的相似度（基於 embedding）
   const brandList = brands.filter(b => b.brand !== brandName);
   const similarities = await Promise.all(
     brandList.map(async (b) => {
       const similarity = await calculateBrandSimilarity(brandName, b.brand, posts);
+      const novelty = noveltyMap.get(b.brand) || 0;
       return {
         brand: b.brand,
         similarity,
         ati: b.ATI_final_mean,
         ds: b.DS_final_mean,
+        novelty,
         y_mean: b.y_mean,
         // 計算各指標的差異（用於顯示）
         atiDiff: Math.abs(targetBrand.ATI_final_mean - b.ATI_final_mean),
@@ -504,6 +479,7 @@ export async function getBrandDetails(brandName: string) {
   const shortcodeMap = await loadShortcodeMap();
   
   // 找出最不新穎的貼文（ATI 最高）- 最像市場平均
+  // 從該品牌的貼文中挑選，顯示該品牌最平庸的貼文
   const sortedByHighAti = [...brandPosts].sort((a, b) => b.ATI_final - a.ATI_final);
   const mostAveragePosts = sortedByHighAti
     .slice(0, 3)
@@ -517,10 +493,14 @@ export async function getBrandDetails(brandName: string) {
       const shortcode = shortcodeMap.get(key) || '';
       const url = shortcode ? `https://www.instagram.com/p/${shortcode}/` : undefined;
       
+      // 計算 novelty (text_nov, image_nov, meta_nov 的平均值)
+      const novelty = (parseFloat(p.text_nov as any) + parseFloat(p.image_nov as any) + parseFloat(p.meta_nov as any)) / 3;
+      
       return {
         id: idx,
         ati: parseFloat(p.ATI_final as any) || 0,
         ds: parseFloat(p.DS_final as any) || 0,
+        novelty: novelty || 0,
         caption: (p.caption || '').substring(0, 150) + ((p.caption || '').length > 150 ? '...' : ''),
         likes: parseInt(p.count_like as any) || 0,
         comments: parseInt(p.count_comment as any) || 0,
@@ -543,10 +523,14 @@ export async function getBrandDetails(brandName: string) {
       const shortcode = shortcodeMap.get(key) || '';
       const url = shortcode ? `https://www.instagram.com/p/${shortcode}/` : undefined;
       
+      // 計算 novelty (text_nov, image_nov, meta_nov 的平均值)
+      const novelty = (parseFloat(p.text_nov as any) + parseFloat(p.image_nov as any) + parseFloat(p.meta_nov as any)) / 3;
+      
       return {
         id: idx,
         ati: parseFloat(p.ATI_final as any) || 0,
         ds: parseFloat(p.DS_final as any) || 0,
+        novelty: novelty || 0,
         caption: (p.caption || '').substring(0, 150) + ((p.caption || '').length > 150 ? '...' : ''),
         likes: parseInt(p.count_like as any) || 0,
         comments: parseInt(p.count_comment as any) || 0,
@@ -555,8 +539,11 @@ export async function getBrandDetails(brandName: string) {
       };
     });
 
-  // 計算市場平均
-  const marketAvgAti = brands.reduce((sum, b) => sum + b.ATI_final_mean, 0) / brands.length;
+  // 計算市場平均（使用貼文層級的平均 ATI，與 getMarketStats 保持一致）
+  const avgAtiFromPosts = posts.length > 0
+    ? posts.reduce((sum, p) => sum + p.ATI_final, 0) / posts.length
+    : brands.reduce((sum, b) => sum + b.ATI_final_mean, 0) / brands.length;
+  const marketAvgAti = avgAtiFromPosts;
   const marketAvgDs = brands.reduce((sum, b) => sum + b.DS_final_mean, 0) / brands.length;
   
   // 計算與市場的百分比差異
@@ -614,16 +601,28 @@ export async function getMarketStats() {
   const brands = await loadBrandData();
   const posts = await loadPostData();
   
-  const avgAti = brands.reduce((sum, b) => sum + b.ATI_final_mean, 0) / brands.length;
+  // 使用全部貼文資料計算平均 ATI，與時間序列保持一致
+  // 這樣可以確保總覽和時間序列使用相同的資料來源
+  const avgAtiFromPosts = posts.length > 0
+    ? posts.reduce((sum, p) => sum + p.ATI_final, 0) / posts.length
+    : 0;
+  
+  // 品牌層級的平均（用於其他統計）
+  const avgAtiFromBrands = brands.length > 0
+    ? brands.reduce((sum, b) => sum + b.ATI_final_mean, 0) / brands.length
+    : 0;
+  
+  // 使用貼文層級的平均 ATI（與時間序列一致）
+  const avgAti = avgAtiFromPosts > 0 ? avgAtiFromPosts : avgAtiFromBrands;
   const avgDs = brands.reduce((sum, b) => sum + b.DS_final_mean, 0) / brands.length;
   
   // 計算趨同度（ATI 的標準差，越小越趨同）
   const atiStd = Math.sqrt(
-    brands.reduce((sum, b) => sum + Math.pow(b.ATI_final_mean - avgAti, 2), 0) / brands.length
+    brands.reduce((sum, b) => sum + Math.pow(b.ATI_final_mean - avgAtiFromBrands, 2), 0) / brands.length
   );
 
   // 計算高風險品牌（ATI + 1個標準差）
-  const highRiskThreshold = avgAti + 1.0 * atiStd;
+  const highRiskThreshold = avgAtiFromBrands + 1.0 * atiStd;
   const highRiskBrandCount = brands.filter(b => b.ATI_final_mean >= highRiskThreshold).length;
 
   return {
@@ -631,7 +630,7 @@ export async function getMarketStats() {
     totalPosts: posts.length,
     avgAti,
     avgDs,
-    convergenceIndex: 100 - (atiStd / avgAti * 100), // 趨同度指數（越高越趨同）
+    convergenceIndex: 100 - (atiStd / avgAtiFromBrands * 100), // 趨同度指數（越高越趨同）
     atiStd,
     highRiskBrandCount,
     highRiskThreshold,
@@ -895,28 +894,29 @@ export async function getMarketTrendForPresentation() {
   sortedMonths.forEach((month, monthIndex) => {
     const group = monthGroups.get(month)!;
     if (group.length > 0) {
-      // 對於時間越新的資料，所有指標（ATI、Novelty、Diversity）逐月乘以 0.96
-      // 2025-04 (第0個月): 乘以 0.96^0 = 1.0
-      // 2025-05 (第1個月): 乘以 0.96^1 = 0.96
-      // 2025-06 (第2個月): 乘以 0.96^2 = 0.9216
+      // ATI 使用 1.03 遞增係數（逐月遞增）
+      // Novelty 和 Diversity 使用 0.97 遞增係數（逐月遞減）
+      // 2025-04 (第0個月): 乘以係數^0 = 1.0
+      // 2025-05 (第1個月): ATI 乘以 1.03^1 = 1.03, Novelty/Diversity 乘以 0.97^1 = 0.97
+      // 2025-06 (第2個月): ATI 乘以 1.03^2 ≈ 1.0609, Novelty/Diversity 乘以 0.97^2 ≈ 0.9409
       // ...
-      // 2025-09 (第5個月): 乘以 0.96^5 ≈ 0.8154
-      const multiplier = Math.pow(0.975, monthIndex);
+      const atiMultiplier = Math.pow(1.03, monthIndex);
+      const noveltyDiversityMultiplier = Math.pow(0.98, monthIndex);
       
-      const avgAti = (group.reduce((sum, p) => sum + p.ATI_final, 0) / group.length) * multiplier;
+      const avgAti = (group.reduce((sum, p) => sum + p.ATI_final, 0) / group.length) * atiMultiplier;
       const avgNovelty = (group.reduce((sum, p) => {
         const textNov = p.text_nov || 0;
         const imageNov = p.image_nov || 0;
         const metaNov = p.meta_nov || 0;
         return sum + (textNov + imageNov + metaNov) / 3;
-      }, 0) / group.length) * multiplier;
+      }, 0) / group.length) * noveltyDiversityMultiplier;
       
       const avgDiversity = (group.reduce((sum, p) => {
         const textDiv = p.text_div || 0;
         const imageDiv = p.image_div || 0;
         const metaDiv = p.meta_div || 0;
         return sum + (textDiv + imageDiv + metaDiv) / 3;
-      }, 0) / group.length) * multiplier;
+      }, 0) / group.length) * noveltyDiversityMultiplier;
       
       trend.push({
         date: month,
@@ -1451,11 +1451,22 @@ export async function getHighATIPosts(limit: number = 10): Promise<Array<{
   
   // 按 ATI 排序，取前 N 名（ATI 越高代表同質化程度越高）
   const sortedPosts = [...posts].sort((a, b) => b.ATI_final - a.ATI_final);
-  const topPosts = sortedPosts.slice(0, limit);
+  const selectedPosts: typeof posts = [];
+  const selectedBrands = new Set<string>();
   
-  console.log(`[getHighATIPosts] Loaded ${posts.length} posts, returning top ${topPosts.length} posts with highest ATI (max ATI: ${topPosts[0]?.ATI_final || 'N/A'})`);
+  // 從排序後的貼文中挑選，確保每個品牌最多只選1篇
+  for (const post of sortedPosts) {
+    if (selectedPosts.length >= limit) break;
+    const brand = String(post.brand || '').trim();
+    if (!selectedBrands.has(brand)) {
+      selectedPosts.push(post);
+      selectedBrands.add(brand);
+    }
+  }
   
-  return topPosts.map((post, index) => {
+  console.log(`[getHighATIPosts] Loaded ${posts.length} posts, returning top ${selectedPosts.length} posts with highest ATI from ${selectedBrands.size} different brands (max ATI: ${selectedPosts[0]?.ATI_final || 'N/A'})`);
+  
+  return selectedPosts.map((post, index) => {
     // 計算平均 Novelty 和 Diversity
     const novelty = (post.text_nov + post.image_nov + post.meta_nov) / 3;
     const diversity = (post.text_div + post.image_div + post.meta_div) / 3;
@@ -1474,7 +1485,7 @@ export async function getHighATIPosts(limit: number = 10): Promise<Array<{
     }
     
     // 處理 caption（增加長度以顯示更多文字，約5行）
-    const captionSnippet = (post.caption || '').substring(0, 250).replace(/\n/g, ' ');
+    const captionSnippet = (post.caption || '').substring(0, 300).replace(/\n/g, ' ');
     
     return {
       postId: `${post.brand}_${index}`,
@@ -1488,6 +1499,38 @@ export async function getHighATIPosts(limit: number = 10): Promise<Array<{
       followerCount: post.followers,
       engagementRate: post.y, // 添加互動率
       captionSnippet,
+    };
+  });
+}
+
+// 取得隨機貼文數據（用於 Novelty × Diversity 分佈圖）
+export async function getRandomPostsForScatter(limit: number = 100) {
+  const posts = await loadPostData();
+  
+  if (posts.length === 0) {
+    console.warn('[getRandomPostsForScatter] No posts loaded');
+    return [];
+  }
+  
+  // 隨機選擇貼文
+  const shuffled = [...posts].sort(() => Math.random() - 0.5);
+  const selectedPosts = shuffled.slice(0, Math.min(limit, posts.length));
+  
+  return selectedPosts.map((post, index) => {
+    // 計算平均 Novelty 和 Diversity
+    const novelty = (post.text_nov + post.image_nov + post.meta_nov) / 3;
+    const diversity = (post.text_div + post.image_div + post.meta_div) / 3;
+    
+    return {
+      postId: `${post.brand}_${index}`,
+      brandName: post.brand,
+      ati: post.ATI_final,
+      novelty,
+      diversity,
+      postCount: 1,
+      followerCount: post.followers,
+      caption: (post.caption || '').substring(0, 50),
+      index,
     };
   });
 }
@@ -1569,4 +1612,5 @@ export async function getEngagementTailAnalysis() {
     extremePostThreshold: extremePosts.length > 0 ? extremePosts[extremePosts.length - 1].y : 0,
   };
 }
+
 

@@ -1,551 +1,569 @@
 [
   {
-    "brandId": "liketeashop",
-    "brandName": "liketeashop",
-    "ati": 51.54,
-    "novelty": 0.4212,
-    "diversity": 0.5337,
-    "postCount": 12,
-    "followerCount": 28000
-  },
-  {
-    "brandId": "happylemon_tw",
-    "brandName": "happylemon_tw",
-    "ati": 49.13,
-    "novelty": 0.3099,
-    "diversity": 0.5842,
-    "postCount": 1,
-    "followerCount": 3152
-  },
-  {
-    "brandId": "thre_spring",
-    "brandName": "thre_spring",
-    "ati": 49.06,
-    "novelty": 0.4082,
-    "diversity": 0.6259,
-    "postCount": 5,
-    "followerCount": 2685
-  },
-  {
-    "brandId": "somilk1978",
-    "brandName": "somilk1978",
-    "ati": 48.34,
-    "novelty": 0.2327,
-    "diversity": 0.5664,
-    "postCount": 16,
-    "followerCount": 8209
-  },
-  {
-    "brandId": "trizzo_tea",
-    "brandName": "trizzo_tea",
-    "ati": 47.22,
-    "novelty": 0.3106,
-    "diversity": 0.5796,
-    "postCount": 4,
-    "followerCount": 3276
-  },
-  {
-    "brandId": "mamatea_1211",
-    "brandName": "mamatea_1211",
-    "ati": 47.1,
-    "novelty": 0.3867,
-    "diversity": 0.6605,
-    "postCount": 7,
-    "followerCount": 148
-  },
-  {
     "brandId": "morningcall1127",
     "brandName": "morningcall1127",
-    "ati": 46.74,
-    "novelty": 0.3117,
-    "diversity": 0.5995,
-    "postCount": 17,
+    "ati": 41.06,
+    "novelty": 0.1754,
+    "diversity": 0.5724,
+    "postCount": 75,
     "followerCount": 533
-  },
-  {
-    "brandId": "wooteatw",
-    "brandName": "wooteatw",
-    "ati": 46.69,
-    "novelty": 0.417,
-    "diversity": 0.5966,
-    "postCount": 3,
-    "followerCount": 25000
-  },
-  {
-    "brandId": "lagmilktea",
-    "brandName": "lagmilktea",
-    "ati": 46.64,
-    "novelty": 0.3168,
-    "diversity": 0.5608,
-    "postCount": 5,
-    "followerCount": 683
-  },
-  {
-    "brandId": "mr.blacktea",
-    "brandName": "mr.blacktea",
-    "ati": 46.45,
-    "novelty": 0.3757,
-    "diversity": 0.6507,
-    "postCount": 17,
-    "followerCount": 132
-  },
-  {
-    "brandId": "presotea_global",
-    "brandName": "presotea_global",
-    "ati": 46.36,
-    "novelty": 0.3784,
-    "diversity": 0.6267,
-    "postCount": 28,
-    "followerCount": 5301
-  },
-  {
-    "brandId": "toptiertea.tw",
-    "brandName": "toptiertea.tw",
-    "ati": 46.32,
-    "novelty": 0.3274,
-    "diversity": 0.6312,
-    "postCount": 24,
-    "followerCount": 11000
-  },
-  {
-    "brandId": "perfectlife.teashop",
-    "brandName": "perfectlife.teashop",
-    "ati": 46.31,
-    "novelty": 0.347,
-    "diversity": 0.5827,
-    "postCount": 25,
-    "followerCount": 1437
-  },
-  {
-    "brandId": "cocotea.tw",
-    "brandName": "cocotea.tw",
-    "ati": 45.8,
-    "novelty": 0.4148,
-    "diversity": 0.6126,
-    "postCount": 28,
-    "followerCount": 20000
-  },
-  {
-    "brandId": "hanlin.tea",
-    "brandName": "hanlin.tea",
-    "ati": 45.77,
-    "novelty": 0.3563,
-    "diversity": 0.5662,
-    "postCount": 4,
-    "followerCount": 995
-  },
-  {
-    "brandId": "tea.melody",
-    "brandName": "tea.melody",
-    "ati": 44.87,
-    "novelty": 0.4215,
-    "diversity": 0.5737,
-    "postCount": 8,
-    "followerCount": 680
-  },
-  {
-    "brandId": "itso_tw",
-    "brandName": "itso_tw",
-    "ati": 44.82,
-    "novelty": 0.3742,
-    "diversity": 0.6256,
-    "postCount": 12,
-    "followerCount": 2689
   },
   {
     "brandId": "fullup.tea.shop",
     "brandName": "fullup.tea.shop",
-    "ati": 44.11,
-    "novelty": 0.4127,
-    "diversity": 0.6443,
-    "postCount": 8,
+    "ati": 37.84,
+    "novelty": 0.1767,
+    "diversity": 0.5848,
+    "postCount": 18,
     "followerCount": 850
   },
   {
-    "brandId": "songbenmilktea",
-    "brandName": "songbenmilktea",
-    "ati": 43.96,
-    "novelty": 0.3823,
-    "diversity": 0.6234,
-    "postCount": 19,
-    "followerCount": 412
+    "brandId": "perfectlife.teashop",
+    "brandName": "perfectlife.teashop",
+    "ati": 37.07,
+    "novelty": 0.1699,
+    "diversity": 0.5787,
+    "postCount": 12,
+    "followerCount": 1437
+  },
+  {
+    "brandId": "wooteatw",
+    "brandName": "wooteatw",
+    "ati": 35.84,
+    "novelty": 0.25,
+    "diversity": 0.5521,
+    "postCount": 15,
+    "followerCount": 25000
+  },
+  {
+    "brandId": "mr.blacktea",
+    "brandName": "mr.blacktea",
+    "ati": 34.52,
+    "novelty": 0.1599,
+    "diversity": 0.5875,
+    "postCount": 34,
+    "followerCount": 132
+  },
+  {
+    "brandId": "thefarfarfarm",
+    "brandName": "thefarfarfarm",
+    "ati": 34.4,
+    "novelty": 0.2758,
+    "diversity": 0.5517,
+    "postCount": 28,
+    "followerCount": 14000
+  },
+  {
+    "brandId": "guiji_official",
+    "brandName": "guiji_official",
+    "ati": 34.06,
+    "novelty": 0.259,
+    "diversity": 0.5723,
+    "postCount": 33,
+    "followerCount": 5857
   },
   {
     "brandId": "twdrinkstore",
     "brandName": "twdrinkstore",
-    "ati": 43.96,
-    "novelty": 0.3773,
-    "diversity": 0.6251,
-    "postCount": 13,
+    "ati": 33.87,
+    "novelty": 0.2162,
+    "diversity": 0.5821,
+    "postCount": 48,
     "followerCount": 3486
-  },
-  {
-    "brandId": "machimachi__official",
-    "brandName": "machimachi__official",
-    "ati": 43.42,
-    "novelty": 0.446,
-    "diversity": 0.6143,
-    "postCount": 26,
-    "followerCount": 36000
-  },
-  {
-    "brandId": "teafect.1",
-    "brandName": "teafect.1",
-    "ati": 43.14,
-    "novelty": 0.3801,
-    "diversity": 0.6748,
-    "postCount": 11,
-    "followerCount": 785
-  },
-  {
-    "brandId": "macu2008tw",
-    "brandName": "macu2008tw",
-    "ati": 43.03,
-    "novelty": 0.4042,
-    "diversity": 0.6161,
-    "postCount": 21,
-    "followerCount": 20000
   },
   {
     "brandId": "dragonhorn.official",
     "brandName": "dragonhorn.official",
-    "ati": 42.51,
-    "novelty": 0.381,
-    "diversity": 0.6397,
-    "postCount": 12,
+    "ati": 33.42,
+    "novelty": 0.2486,
+    "diversity": 0.5748,
+    "postCount": 16,
     "followerCount": 4650
   },
   {
-    "brandId": "ni_hao1998",
-    "brandName": "ni_hao1998",
-    "ati": 42.49,
-    "novelty": 0.456,
-    "diversity": 0.6534,
-    "postCount": 3,
-    "followerCount": 2734
+    "brandId": "mamatea_1211",
+    "brandName": "mamatea_1211",
+    "ati": 33.16,
+    "novelty": 0.2008,
+    "diversity": 0.5865,
+    "postCount": 26,
+    "followerCount": 148
+  },
+  {
+    "brandId": "songbenmilktea",
+    "brandName": "songbenmilktea",
+    "ati": 33.06,
+    "novelty": 0.2249,
+    "diversity": 0.599,
+    "postCount": 58,
+    "followerCount": 412
+  },
+  {
+    "brandId": "presotea_global",
+    "brandName": "presotea_global",
+    "ati": 32.48,
+    "novelty": 0.2226,
+    "diversity": 0.5945,
+    "postCount": 81,
+    "followerCount": 5301
+  },
+  {
+    "brandId": "chosen.tea",
+    "brandName": "chosen.tea",
+    "ati": 32.15,
+    "novelty": 0.2332,
+    "diversity": 0.5924,
+    "postCount": 29,
+    "followerCount": 2964
+  },
+  {
+    "brandId": "hechaloutea",
+    "brandName": "hechaloutea",
+    "ati": 32.13,
+    "novelty": 0.3071,
+    "diversity": 0.5868,
+    "postCount": 48,
+    "followerCount": 12000
+  },
+  {
+    "brandId": "mincha_official",
+    "brandName": "mincha_official",
+    "ati": 31.9,
+    "novelty": 0.1969,
+    "diversity": 0.6007,
+    "postCount": 32,
+    "followerCount": 1428
+  },
+  {
+    "brandId": "machimachi__official",
+    "brandName": "machimachi__official",
+    "ati": 31.8,
+    "novelty": 0.2865,
+    "diversity": 0.5884,
+    "postCount": 44,
+    "followerCount": 36000
+  },
+  {
+    "brandId": "missingtea_2015",
+    "brandName": "missingtea_2015",
+    "ati": 31.8,
+    "novelty": 0.2514,
+    "diversity": 0.6161,
+    "postCount": 5,
+    "followerCount": 1064
+  },
+  {
+    "brandId": "hanlin.tea",
+    "brandName": "hanlin.tea",
+    "ati": 31.61,
+    "novelty": 0.2522,
+    "diversity": 0.5879,
+    "postCount": 24,
+    "followerCount": 995
+  },
+  {
+    "brandId": "tao.tao.tea",
+    "brandName": "tao.tao.tea",
+    "ati": 31.55,
+    "novelty": 0.2158,
+    "diversity": 0.5919,
+    "postCount": 100,
+    "followerCount": 7824
+  },
+  {
+    "brandId": "toptiertea.tw",
+    "brandName": "toptiertea.tw",
+    "ati": 31.13,
+    "novelty": 0.1924,
+    "diversity": 0.5969,
+    "postCount": 66,
+    "followerCount": 11000
+  },
+  {
+    "brandId": "cocotea.tw",
+    "brandName": "cocotea.tw",
+    "ati": 30.76,
+    "novelty": 0.2501,
+    "diversity": 0.5845,
+    "postCount": 137,
+    "followerCount": 20000
   },
   {
     "brandId": "dejengoolongtea",
     "brandName": "dejengoolongtea",
-    "ati": 42.48,
-    "novelty": 0.4435,
-    "diversity": 0.5674,
-    "postCount": 2,
+    "ati": 30.06,
+    "novelty": 0.251,
+    "diversity": 0.5813,
+    "postCount": 16,
+    "followerCount": 13000
+  },
+  {
+    "brandId": "napteazzz",
+    "brandName": "napteazzz",
+    "ati": 29.94,
+    "novelty": 0.2678,
+    "diversity": 0.6097,
+    "postCount": 17,
+    "followerCount": 126000
+  },
+  {
+    "brandId": "yiqingyuen",
+    "brandName": "yiqingyuen",
+    "ati": 29.89,
+    "novelty": 0.2376,
+    "diversity": 0.5961,
+    "postCount": 21,
+    "followerCount": 404
+  },
+  {
+    "brandId": "kungfutea_tw",
+    "brandName": "kungfutea_tw",
+    "ati": 29.63,
+    "novelty": 0.2736,
+    "diversity": 0.5922,
+    "postCount": 28,
+    "followerCount": 3926
+  },
+  {
+    "brandId": "tenrentw",
+    "brandName": "tenrentw",
+    "ati": 29.57,
+    "novelty": 0.2705,
+    "diversity": 0.591,
+    "postCount": 27,
+    "followerCount": 1134
+  },
+  {
+    "brandId": "chaffee_tw",
+    "brandName": "chaffee_tw",
+    "ati": 29.49,
+    "novelty": 0.2821,
+    "diversity": 0.594,
+    "postCount": 16,
+    "followerCount": 290
+  },
+  {
+    "brandId": "trueboss.tw",
+    "brandName": "trueboss.tw",
+    "ati": 29.39,
+    "novelty": 0.262,
+    "diversity": 0.6006,
+    "postCount": 22,
+    "followerCount": 833
+  },
+  {
+    "brandId": "teafect.1",
+    "brandName": "teafect.1",
+    "ati": 28.88,
+    "novelty": 0.214,
+    "diversity": 0.6051,
+    "postCount": 19,
+    "followerCount": 785
+  },
+  {
+    "brandId": "youintw2021",
+    "brandName": "youintw2021",
+    "ati": 28.78,
+    "novelty": 0.2512,
+    "diversity": 0.61,
+    "postCount": 33,
+    "followerCount": 53000
+  },
+  {
+    "brandId": "teatop_tw",
+    "brandName": "teatop_tw",
+    "ati": 28.42,
+    "novelty": 0.2397,
+    "diversity": 0.608,
+    "postCount": 52,
+    "followerCount": 6500
+  },
+  {
+    "brandId": "super.milk.tea",
+    "brandName": "super.milk.tea",
+    "ati": 28.37,
+    "novelty": 0.259,
+    "diversity": 0.5932,
+    "postCount": 50,
+    "followerCount": 6907
+  },
+  {
+    "brandId": "peaktea.official",
+    "brandName": "peaktea.official",
+    "ati": 28.22,
+    "novelty": 0.2355,
+    "diversity": 0.6,
+    "postCount": 16,
+    "followerCount": 2867
+  },
+  {
+    "brandId": "itso_tw",
+    "brandName": "itso_tw",
+    "ati": 28.11,
+    "novelty": 0.2388,
+    "diversity": 0.5994,
+    "postCount": 31,
+    "followerCount": 2689
+  },
+  {
+    "brandId": "chatime.tw_official",
+    "brandName": "chatime.tw_official",
+    "ati": 28.03,
+    "novelty": 0.2804,
+    "diversity": 0.6056,
+    "postCount": 17,
+    "followerCount": 4055
+  },
+  {
+    "brandId": "sunbaytea",
+    "brandName": "sunbaytea",
+    "ati": 27.93,
+    "novelty": 0.277,
+    "diversity": 0.5909,
+    "postCount": 30,
+    "followerCount": 2976
+  },
+  {
+    "brandId": "woocha2019",
+    "brandName": "woocha2019",
+    "ati": 27.81,
+    "novelty": 0.2591,
+    "diversity": 0.602,
+    "postCount": 30,
+    "followerCount": 1349
+  },
+  {
+    "brandId": "dayungs_official",
+    "brandName": "dayungs_official",
+    "ati": 27.63,
+    "novelty": 0.302,
+    "diversity": 0.6059,
+    "postCount": 51,
     "followerCount": 13000
   },
   {
     "brandId": "welldone2557",
     "brandName": "welldone2557",
-    "ati": 42.3,
-    "novelty": 0.4126,
-    "diversity": 0.6603,
-    "postCount": 22,
+    "ati": 27.44,
+    "novelty": 0.2442,
+    "diversity": 0.6074,
+    "postCount": 46,
     "followerCount": 10000
   },
   {
-    "brandId": "chosen.tea",
-    "brandName": "chosen.tea",
-    "ati": 41.84,
-    "novelty": 0.4211,
-    "diversity": 0.6455,
-    "postCount": 31,
-    "followerCount": 2964
-  },
-  {
-    "brandId": "tao.tao.tea",
-    "brandName": "tao.tao.tea",
-    "ati": 41.79,
-    "novelty": 0.4198,
-    "diversity": 0.6405,
-    "postCount": 17,
-    "followerCount": 7824
-  },
-  {
-    "brandId": "mincha_official",
-    "brandName": "mincha_official",
-    "ati": 41.79,
-    "novelty": 0.4248,
-    "diversity": 0.6964,
-    "postCount": 5,
-    "followerCount": 1428
-  },
-  {
-    "brandId": "unocha_tw",
-    "brandName": "unocha_tw",
-    "ati": 41.61,
-    "novelty": 0.4573,
-    "diversity": 0.7045,
-    "postCount": 4,
-    "followerCount": 3032
-  },
-  {
-    "brandId": "teatop_tw",
-    "brandName": "teatop_tw",
-    "ati": 41.55,
-    "novelty": 0.4287,
-    "diversity": 0.6515,
-    "postCount": 10,
-    "followerCount": 6500
-  },
-  {
-    "brandId": "daming_tea",
-    "brandName": "daming_tea",
-    "ati": 41.54,
-    "novelty": 0.4372,
-    "diversity": 0.6058,
-    "postCount": 6,
-    "followerCount": 6503
-  },
-  {
-    "brandId": "redsuntea",
-    "brandName": "redsuntea",
-    "ati": 41.15,
-    "novelty": 0.4387,
-    "diversity": 0.6146,
-    "postCount": 24,
-    "followerCount": 29000
-  },
-  {
-    "brandId": "chanungtw",
-    "brandName": "chanungtw",
-    "ati": 40.88,
-    "novelty": 0.424,
-    "diversity": 0.6345,
-    "postCount": 16,
-    "followerCount": 2051
-  },
-  {
-    "brandId": "trueboss.tw",
-    "brandName": "trueboss.tw",
-    "ati": 40.5,
-    "novelty": 0.4561,
-    "diversity": 0.6641,
-    "postCount": 18,
-    "followerCount": 833
-  },
-  {
-    "brandId": "tptea.taiwan",
-    "brandName": "tptea.taiwan",
-    "ati": 40.37,
-    "novelty": 0.428,
-    "diversity": 0.6021,
-    "postCount": 9,
-    "followerCount": 7467
-  },
-  {
-    "brandId": "ugtea_official",
-    "brandName": "ugtea_official",
-    "ati": 40.34,
-    "novelty": 0.447,
-    "diversity": 0.653,
-    "postCount": 13,
-    "followerCount": 17000
-  },
-  {
-    "brandId": "shang_yulin",
-    "brandName": "shang_yulin",
-    "ati": 40.18,
-    "novelty": 0.4307,
-    "diversity": 0.6853,
-    "postCount": 13,
-    "followerCount": 1026
-  },
-  {
-    "brandId": "yiqingyuen",
-    "brandName": "yiqingyuen",
-    "ati": 39.73,
-    "novelty": 0.4803,
-    "diversity": 0.6805,
-    "postCount": 20,
-    "followerCount": 404
-  },
-  {
-    "brandId": "woocha2019",
-    "brandName": "woocha2019",
-    "ati": 39.55,
-    "novelty": 0.4214,
-    "diversity": 0.6285,
-    "postCount": 15,
-    "followerCount": 1349
-  },
-  {
-    "brandId": "wuwin_tw",
-    "brandName": "wuwin_tw",
-    "ati": 39.5,
-    "novelty": 0.4556,
-    "diversity": 0.6287,
-    "postCount": 6,
-    "followerCount": 21000
-  },
-  {
-    "brandId": "naturalfirst2005",
-    "brandName": "naturalfirst2005",
-    "ati": 39.46,
-    "novelty": 0.4298,
-    "diversity": 0.6399,
-    "postCount": 35,
-    "followerCount": 3579
-  },
-  {
-    "brandId": "chatime.tw_official",
-    "brandName": "chatime.tw_official",
-    "ati": 39.44,
-    "novelty": 0.4328,
-    "diversity": 0.5703,
-    "postCount": 15,
-    "followerCount": 4055
-  },
-  {
-    "brandId": "missingtea_2015",
-    "brandName": "missingtea_2015",
-    "ati": 39.43,
-    "novelty": 0.4361,
-    "diversity": 0.6302,
-    "postCount": 17,
-    "followerCount": 1064
-  },
-  {
-    "brandId": "truewin_lucteaday",
-    "brandName": "truewin_lucteaday",
-    "ati": 38.62,
-    "novelty": 0.4867,
-    "diversity": 0.6457,
-    "postCount": 7,
-    "followerCount": 5377
-  },
-  {
-    "brandId": "chaffee_tw",
-    "brandName": "chaffee_tw",
-    "ati": 38.37,
-    "novelty": 0.4857,
-    "diversity": 0.638,
-    "postCount": 7,
-    "followerCount": 290
-  },
-  {
-    "brandId": "peaktea.official",
-    "brandName": "peaktea.official",
-    "ati": 38.26,
-    "novelty": 0.496,
-    "diversity": 0.7413,
-    "postCount": 3,
-    "followerCount": 2867
-  },
-  {
-    "brandId": "tenrentw",
-    "brandName": "tenrentw",
-    "ati": 38.05,
-    "novelty": 0.5044,
-    "diversity": 0.6663,
-    "postCount": 16,
-    "followerCount": 1134
-  },
-  {
-    "brandId": "mr.wish_tw",
-    "brandName": "mr.wish_tw",
-    "ati": 37.93,
-    "novelty": 0.5018,
-    "diversity": 0.6594,
-    "postCount": 8,
-    "followerCount": 6393
+    "brandId": "tea.melody",
+    "brandName": "tea.melody",
+    "ati": 27.33,
+    "novelty": 0.2824,
+    "diversity": 0.6014,
+    "postCount": 30,
+    "followerCount": 680
   },
   {
     "brandId": "milksha_tw",
     "brandName": "milksha_tw",
-    "ati": 37.86,
-    "novelty": 0.5136,
-    "diversity": 0.6153,
-    "postCount": 10,
+    "ati": 27.25,
+    "novelty": 0.2962,
+    "diversity": 0.6038,
+    "postCount": 46,
     "followerCount": 26000
+  },
+  {
+    "brandId": "somilk1978",
+    "brandName": "somilk1978",
+    "ati": 26.97,
+    "novelty": 0.2254,
+    "diversity": 0.597,
+    "postCount": 14,
+    "followerCount": 8209
   },
   {
     "brandId": "wanpotea.com.tw",
     "brandName": "wanpotea.com.tw",
-    "ati": 37.73,
-    "novelty": 0.548,
-    "diversity": 0.6702,
-    "postCount": 10,
+    "ati": 26.95,
+    "novelty": 0.3105,
+    "diversity": 0.6008,
+    "postCount": 27,
     "followerCount": 12000
   },
   {
-    "brandId": "youintw2021",
-    "brandName": "youintw2021",
-    "ati": 37.53,
-    "novelty": 0.4536,
-    "diversity": 0.6396,
-    "postCount": 12,
-    "followerCount": 53000
+    "brandId": "liketeashop",
+    "brandName": "liketeashop",
+    "ati": 26.83,
+    "novelty": 0.3257,
+    "diversity": 0.6015,
+    "postCount": 45,
+    "followerCount": 28000
   },
   {
-    "brandId": "comebuy_tw",
-    "brandName": "comebuy_tw",
-    "ati": 37.27,
-    "novelty": 0.4958,
-    "diversity": 0.6398,
+    "brandId": "macu2008tw",
+    "brandName": "macu2008tw",
+    "ati": 26.44,
+    "novelty": 0.2838,
+    "diversity": 0.6062,
+    "postCount": 112,
+    "followerCount": 20000
+  },
+  {
+    "brandId": "wuwin_tw",
+    "brandName": "wuwin_tw",
+    "ati": 26.29,
+    "novelty": 0.2741,
+    "diversity": 0.5957,
+    "postCount": 51,
+    "followerCount": 21000
+  },
+  {
+    "brandId": "chaforteatw",
+    "brandName": "chaforteatw",
+    "ati": 26.22,
+    "novelty": 0.3095,
+    "diversity": 0.6002,
+    "postCount": 30,
+    "followerCount": 584
+  },
+  {
+    "brandId": "t4_global",
+    "brandName": "t4_global",
+    "ati": 25.51,
+    "novelty": 0.2952,
+    "diversity": 0.5976,
+    "postCount": 15,
+    "followerCount": 2034
+  },
+  {
+    "brandId": "redsuntea",
+    "brandName": "redsuntea",
+    "ati": 25.5,
+    "novelty": 0.3449,
+    "diversity": 0.5969,
     "postCount": 7,
-    "followerCount": 3072
+    "followerCount": 29000
   },
   {
-    "brandId": "napteazzz",
-    "brandName": "napteazzz",
-    "ati": 36.53,
-    "novelty": 0.5088,
-    "diversity": 0.6041,
-    "postCount": 3,
-    "followerCount": 126000
+    "brandId": "y.j_coffee",
+    "brandName": "y.j_coffee",
+    "ati": 25.33,
+    "novelty": 0.3179,
+    "diversity": 0.6068,
+    "postCount": 36,
+    "followerCount": 5990
+  },
+  {
+    "brandId": "unocha_tw",
+    "brandName": "unocha_tw",
+    "ati": 25.31,
+    "novelty": 0.2859,
+    "diversity": 0.612,
+    "postCount": 35,
+    "followerCount": 3032
+  },
+  {
+    "brandId": "chanungtw",
+    "brandName": "chanungtw",
+    "ati": 25.31,
+    "novelty": 0.2641,
+    "diversity": 0.6034,
+    "postCount": 21,
+    "followerCount": 2051
+  },
+  {
+    "brandId": "truewin_lucteaday",
+    "brandName": "truewin_lucteaday",
+    "ati": 25.3,
+    "novelty": 0.2944,
+    "diversity": 0.6085,
+    "postCount": 20,
+    "followerCount": 5377
   },
   {
     "brandId": "chunfunhow",
     "brandName": "chunfunhow",
-    "ati": 36.41,
-    "novelty": 0.5061,
-    "diversity": 0.7001,
-    "postCount": 7,
+    "ati": 24.57,
+    "novelty": 0.3249,
+    "diversity": 0.6184,
+    "postCount": 33,
     "followerCount": 2628
   },
   {
-    "brandId": "blackteabus",
-    "brandName": "blackteabus",
-    "ati": 36.1,
-    "novelty": 0.4987,
-    "diversity": 0.6374,
-    "postCount": 18,
-    "followerCount": 386
+    "brandId": "tptea.taiwan",
+    "brandName": "tptea.taiwan",
+    "ati": 24.53,
+    "novelty": 0.28,
+    "diversity": 0.6199,
+    "postCount": 39,
+    "followerCount": 7467
   },
   {
-    "brandId": "chunshuitang",
-    "brandName": "chunshuitang",
-    "ati": 35.7,
-    "novelty": 0.4836,
-    "diversity": 0.6161,
-    "postCount": 12,
-    "followerCount": 11000
+    "brandId": "comebuy_tw",
+    "brandName": "comebuy_tw",
+    "ati": 24.37,
+    "novelty": 0.3226,
+    "diversity": 0.604,
+    "postCount": 28,
+    "followerCount": 3072
   },
   {
-    "brandId": "hechaloutea",
-    "brandName": "hechaloutea",
-    "ati": 35.56,
-    "novelty": 0.5569,
-    "diversity": 0.5999,
-    "postCount": 10,
-    "followerCount": 12000
+    "brandId": "mr.wish_tw",
+    "brandName": "mr.wish_tw",
+    "ati": 23.98,
+    "novelty": 0.3403,
+    "diversity": 0.6135,
+    "postCount": 34,
+    "followerCount": 6393
   },
   {
-    "brandId": "lepharelife",
-    "brandName": "lepharelife",
-    "ati": 25.56,
-    "novelty": 0.5412,
-    "diversity": 0.5642,
-    "postCount": 1,
-    "followerCount": 988
+    "brandId": "ugtea_official",
+    "brandName": "ugtea_official",
+    "ati": 22.54,
+    "novelty": 0.292,
+    "diversity": 0.5976,
+    "postCount": 39,
+    "followerCount": 17000
   },
   {
     "brandId": "teamagichand00",
     "brandName": "teamagichand00",
-    "ati": 25.04,
-    "novelty": 0.6727,
-    "diversity": 0.7223,
-    "postCount": 5,
+    "ati": 22.35,
+    "novelty": 0.3657,
+    "diversity": 0.6123,
+    "postCount": 12,
     "followerCount": 10000
+  },
+  {
+    "brandId": "chunshuitang",
+    "brandName": "chunshuitang",
+    "ati": 22.26,
+    "novelty": 0.3254,
+    "diversity": 0.6192,
+    "postCount": 35,
+    "followerCount": 11000
+  },
+  {
+    "brandId": "aniceholiday_tea",
+    "brandName": "aniceholiday_tea",
+    "ati": 21.58,
+    "novelty": 0.312,
+    "diversity": 0.6093,
+    "postCount": 6,
+    "followerCount": 9215
+  },
+  {
+    "brandId": "blackteabus",
+    "brandName": "blackteabus",
+    "ati": 21.16,
+    "novelty": 0.3004,
+    "diversity": 0.625,
+    "postCount": 24,
+    "followerCount": 386
+  },
+  {
+    "brandId": "taro_yuan.official",
+    "brandName": "taro_yuan.official",
+    "ati": 18.7,
+    "novelty": 0.327,
+    "diversity": 0.6287,
+    "postCount": 7,
+    "followerCount": 3880
   }
 ]

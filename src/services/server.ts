@@ -20,6 +20,7 @@ import {
   getHighATIPosts,
   getEngagementTailAnalysis,
   calculateCorrelationForWeight,
+  getRandomPostsForScatter,
 } from './brandAnalysisService.js';
 import {
   getMarketMapData,
@@ -41,6 +42,7 @@ const IMG_DIR = path.resolve(ROOT, "src/model/input_images");
 // small helper: run python and parse JSON
 function runPython(args: string[]): Promise<any> {
   return new Promise((resolve, reject) => {
+    const TIMEOUT_MS = 300000; // 2 分鐘超時
     const child = spawn(PYTHON, [MODEL_SCRIPT, ...args], {
       cwd: ROOT,
       env: {
@@ -51,6 +53,13 @@ function runPython(args: string[]): Promise<any> {
 
     let stdout = "";
     let stderr = "";
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    // 設置超時
+    timeoutId = setTimeout(() => {
+      child.kill('SIGTERM');
+      reject(new Error(`Python 腳本執行超時（超過 ${TIMEOUT_MS / 1000} 秒）`));
+    }, TIMEOUT_MS);
 
     child.stdout.on("data", (d) => {
       stdout += d.toString();
@@ -59,6 +68,7 @@ function runPython(args: string[]): Promise<any> {
       stderr += d.toString();
     });
     child.on("close", (code) => {
+      if (timeoutId) clearTimeout(timeoutId);
       if (code !== 0) {
         return reject(
           new Error(
@@ -304,6 +314,20 @@ app.get('/api/market/tail-outliers', async (req, res) => {
     return res.json({ outliers });
   } catch (err: any) {
     console.error('tail outliers error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/market/random-posts - 取得隨機貼文（用於 Novelty × Diversity 分佈圖）
+app.get('/api/market/random-posts', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 100;
+    console.log(`[API] /api/market/random-posts called with limit=${limit}`);
+    const posts = await getRandomPostsForScatter(limit);
+    console.log(`[API] /api/market/random-posts returning ${posts.length} posts`);
+    return res.json({ posts });
+  } catch (err: any) {
+    console.error('random posts error:', err);
     return res.status(500).json({ error: err?.message ?? String(err) });
   }
 });

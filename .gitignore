@@ -36,4 +36,6 @@ src/model/outputs/*_optimized.csv
 # 臨時分析文件
 *.md
 !README.md
-結果/
+結果/venv/
+venv/
+*.log
