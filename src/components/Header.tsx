@@ -29,7 +29,7 @@ const Header: React.FC<HeaderProps> = ({
           <Sparkles size={18} className="text-white" />
         </div>
         <h1 className="text-xl font-semibold text-gray-900">
-          ATI Agent
+          Average Trap Detector
         </h1>
       </div>
       
@@ -41,7 +41,7 @@ const Header: React.FC<HeaderProps> = ({
             ${activeView === 'chat' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'}
           `}
         >
-          對話介面
+          貼文評估
         </button>
         <button
           onClick={() => onChangeView('analytics')}

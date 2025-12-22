@@ -90,6 +90,8 @@ export interface ScenarioAdjustment {
   title: string;
   description: string;
   adjustedAti: number;
+  adjustedNovelty?: number;
+  adjustedDiversity?: number;
   changes: string[];
 }
 
@@ -124,13 +126,30 @@ export interface AnalyticsDataset {
   tailOutliers: TailOutlierPost[];
 }
 
+export interface PostAnalysisData {
+  ati: number;
+  avgAti: number;
+  novelty: number;
+  diversity: number;
+  components?: {
+    DS_text: number;
+    DS_image: number;
+    DS_final: number;
+  };
+  textATI?: number;
+  imageATI?: number;
+}
+
 export interface Message {
   id: string;
   content: string;
   isUser: boolean;
   timestamp: Date;
   attachment?: Attachment;
-  analyticsData?: AnalyticsDataset;
+  analyticsData?: AnalyticsDataset; // 保留向後兼容
+  postAnalysisData?: PostAnalysisData; // 新的單一貼文分析數據
+  originalUserContent?: string; // 用戶輸入的原始文字（用於 A/B 測試）
+  originalUserImage?: File; // 用戶上傳的原始圖片（用於 A/B 測試）
 }
 
 export interface Conversation {

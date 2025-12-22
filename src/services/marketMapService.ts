@@ -92,7 +92,7 @@ function pca2D(data: number[][]): number[][] {
   return result;
 }
 
-// 基於 embedding 的 K-means 聚類（使用 12 維特徵）
+// 基於 embedding 的 K-means 聚類（使用 8 維特徵：文字 4 維 + 圖片 4 維，metadata 已移除）
 interface PostData {
   brand: string;
   text_ATI: number;
@@ -103,10 +103,7 @@ interface PostData {
   image_DS: number;
   image_nov: number;
   image_div: number;
-  meta_ATI: number;
-  meta_DS: number;
-  meta_nov: number;
-  meta_div: number;
+  // metadata 已移除
 }
 
 async function loadPostDataForClustering(): Promise<PostData[]> {
@@ -128,10 +125,7 @@ async function loadPostDataForClustering(): Promise<PostData[]> {
       image_DS: parseFloat(p.image_DS || '0') || 0,
       image_nov: parseFloat(p.image_nov || '0') || 0,
       image_div: parseFloat(p.image_div || '0') || 0,
-      meta_ATI: parseFloat(p.meta_ATI || '0') || 0,
-      meta_DS: parseFloat(p.meta_DS || '0') || 0,
-      meta_nov: parseFloat(p.meta_nov || '0') || 0,
-      meta_div: parseFloat(p.meta_div || '0') || 0,
+      // metadata 欄位已移除，不再解析
     }));
   } catch (error) {
     console.error('[MarketMap] Error loading post data for clustering:', error);
@@ -148,7 +142,7 @@ async function clusterBrandsByEmbedding(
     return brands.map(() => 0);
   }
   
-  // 構建每個品牌的 12 維 embedding 向量
+  // 構建每個品牌的 8 維 embedding 向量（文字 4 維：ATI, DS, novelty, diversity + 圖片 4 維）
   const brandVectors: Map<string, number[]> = new Map();
   
   for (const brand of brands) {
@@ -172,14 +166,11 @@ async function clusterBrandsByEmbedding(
       imageDS: acc.imageDS + p.image_DS,
       imageNov: acc.imageNov + p.image_nov,
       imageDiv: acc.imageDiv + p.image_div,
-      metaATI: acc.metaATI + p.meta_ATI,
-      metaDS: acc.metaDS + p.meta_DS,
-      metaNov: acc.metaNov + p.meta_nov,
-      metaDiv: acc.metaDiv + p.meta_div,
+      // metadata 已移除
     }), {
       textATI: 0, textDS: 0, textNov: 0, textDiv: 0,
       imageATI: 0, imageDS: 0, imageNov: 0, imageDiv: 0,
-      metaATI: 0, metaDS: 0, metaNov: 0, metaDiv: 0,
+      // metadata 已移除，現在只使用 8 維特徵（文字和圖片各 4 維）
     });
     
     const n = brandPosts.length;
@@ -192,18 +183,15 @@ async function clusterBrandsByEmbedding(
       sum.imageDS / n,
       sum.imageNov / n,
       sum.imageDiv / n,
-      sum.metaATI / n / 100,
-      sum.metaDS / n,
-      sum.metaNov / n,
-      sum.metaDiv / n,
+      // metadata 已移除，現在只使用 8 維特徵
     ];
     
     brandVectors.set(brand.brand, vector);
   }
   
-  // 將品牌向量轉換為數組
-  const vectors = brands.map(b => brandVectors.get(b.brand) || [0, 0]);
-  const vectorDim = vectors[0]?.length || 12;
+  // 將品牌向量轉換為數組（8 維：文字 4 維 + 圖片 4 維）
+  const vectors = brands.map(b => brandVectors.get(b.brand) || new Array(8).fill(0));
+  const vectorDim = vectors[0]?.length || 8;
   
   // 對所有維度進行 Z-score 標準化，確保每個維度的權重相等
   // 這很重要，因為某些維度（如 text 模態）可能對所有品牌都相同
@@ -760,7 +748,7 @@ export async function getMarketMapData(method: 'positioning' = 'positioning'): P
     n_posts: b.n_posts,
   }));
   
-  // 使用基於 embedding 的聚類（使用原始 12 維特徵）
+  // 使用基於 embedding 的聚類（使用原始 8 維特徵：文字 4 維 + 圖片 4 維）
   const posts = await loadPostDataForClustering();
   const clusters = await clusterBrandsByEmbedding(brands, posts, 4);
   

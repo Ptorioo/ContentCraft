@@ -26,6 +26,9 @@ import {
   getMarketMapData,
   getMarketMapStats,
 } from './marketMapService.js';
+import {
+  getContentTypeAnalysis,
+} from './contentTypeService.js';
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -35,9 +38,17 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 const ROOT = process.cwd();
-const PYTHON = process.env.PYTHON_PATH || "python3";
+// 優先使用環境變數 PYTHON_PATH，否則嘗試使用 venv 中的 python，最後回退到系統 python3
+const PYTHON = process.env.PYTHON_PATH || 
+               (fs.existsSync(path.resolve(ROOT, "venv/bin/python")) 
+                 ? path.resolve(ROOT, "venv/bin/python") 
+                 : "python3");
 const MODEL_SCRIPT = path.resolve(ROOT, "src/model/infer_ati.py");
 const IMG_DIR = path.resolve(ROOT, "src/model/input_images");
+
+console.log(`[server] Python path: ${PYTHON}`);
+console.log(`[server] Model script: ${MODEL_SCRIPT}`);
+console.log(`[server] Model script exists: ${fs.existsSync(MODEL_SCRIPT)}`);
 
 // small helper: run python and parse JSON
 function runPython(args: string[]): Promise<any> {
@@ -332,7 +343,7 @@ app.get('/api/market/random-posts', async (req, res) => {
   }
 });
 
-// GET /api/market/high-ati-posts - 取得高同質化貼文（ATI 最高的貼文）
+// GET /api/market/high-ati-posts - 取得高雷同性貼文（ATI 最高的貼文）
 app.get('/api/market/high-ati-posts', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 10;
@@ -353,6 +364,17 @@ app.get('/api/market/tail-analysis', async (req, res) => {
     return res.json(analysis);
   } catch (err: any) {
     console.error('tail analysis error:', err);
+    return res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
+// GET /api/market/content-types - 取得內容類型分析
+app.get('/api/market/content-types', async (req, res) => {
+  try {
+    const analysis = await getContentTypeAnalysis();
+    return res.json({ contentTypes: analysis });
+  } catch (err: any) {
+    console.error('content types error:', err);
     return res.status(500).json({ error: err?.message ?? String(err) });
   }
 });

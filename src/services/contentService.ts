@@ -1,11 +1,22 @@
 const API_URL = import.meta.env.VITE_API_BASE || "http://localhost:8787";
 
-import { mockAnalytics } from "../data/mockAnalytics";
-import { AnalyticsDataset } from "../types/index";
+export interface PostAnalysisData {
+  ati: number;
+  avgAti: number;
+  novelty: number;
+  diversity: number;
+  components?: {
+    DS_text: number;
+    DS_image: number;
+    DS_final: number;
+  };
+  textATI?: number;
+  imageATI?: number;
+}
 
 export interface AnalyzeResult {
   text: string;
-  analytics?: AnalyticsDataset;
+  analysisData?: PostAnalysisData;
 }
 
 export const analyzeContent = async (
@@ -18,50 +29,69 @@ export const analyzeContent = async (
   formData.append("content", content);
   if (file) formData.append("file", file);
 
-  const response = await fetch(apiUrl, { method: "POST", body: formData });
+  // 同時獲取市場平均 ATI，用於正確比較
+  const [analyzeResponse, marketStatsResponse] = await Promise.all([
+    fetch(apiUrl, { method: "POST", body: formData }),
+    fetch(`${API_URL}/api/market/stats`).catch(() => null), // 如果失敗，使用預設值
+  ]);
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
+  if (!analyzeResponse.ok) {
+    const text = await analyzeResponse.text().catch(() => "");
     throw new Error(
-      `Failed to analyze content: HTTP ${response.status} ${text}`
+      `Failed to analyze content: HTTP ${analyzeResponse.status} ${text}`
     );
   }
 
-  const data = await response.json();
+  const data = await analyzeResponse.json();
+  
+  // 獲取市場平均 ATI（如果 API 調用成功）
+  let avgAti = 50; // 預設值（如果無法獲取）
+  if (marketStatsResponse?.ok) {
+    try {
+      const marketStats = await marketStatsResponse.json();
+      avgAti = marketStats.avgAti || 50;
+    } catch (e) {
+      console.warn("Failed to parse market stats, using default:", e);
+    }
+  }
 
-  const noveltyImage = data?.novelty?.image;
-  const diversityImage = data?.diversity?.image;
+  // 從後端獲取 Novelty 和 Diversity（後端已計算並返回）
+  let novelty = data?.novelty ?? 0.5;
+  let diversity = data?.diversity ?? 0.5;
+  let textATI = 0;
+  let imageATI = 0;
+  
+  if (data?.components) {
+    const dsText = data.components.DS_text || 0;
+    const dsImage = data.components.DS_image || 0;
+    
+    // 計算各模態的 ATI
+    textATI = 100 * (1 - dsText);
+    imageATI = 100 * (1 - dsImage);
+  }
 
   const reply =
     typeof data?.ati === "number"
       ? `ATI score: ${data.ati.toFixed(2)}\n${
-          data.ati < 50 ? "Lower than average" : "Higher than average"
-        }`
+          data.ati < avgAti ? "低於市場平均" : "高於市場平均"
+        } (市場平均: ${avgAti.toFixed(1)})`
       : JSON.stringify(data);
 
-  const mergedAnalytics: AnalyticsDataset =
-    typeof data?.ati === "number" &&
-    typeof noveltyImage === "number" &&
-    typeof diversityImage === "number"
+  const analysisData: PostAnalysisData | undefined =
+    typeof data?.ati === "number"
       ? {
-          ...mockAnalytics,
-          noveltyDiversityScatter: [
-            ...mockAnalytics.noveltyDiversityScatter,
-            {
-              brandId: `user-${Date.now()}`,
-              brandName: "Your input",
-              ati: data.ati,
-              novelty: noveltyImage,
-              diversity: diversityImage,
-              postCount: 1,
-              followerCount: 0,
-            },
-          ],
+          ati: data.ati,
+          avgAti,
+          novelty,
+          diversity,
+          components: data?.components,
+          textATI,
+          imageATI,
         }
-      : mockAnalytics;
+      : undefined;
 
   return {
     text: reply,
-    analytics: mergedAnalytics,
+    analysisData,
   };
 };

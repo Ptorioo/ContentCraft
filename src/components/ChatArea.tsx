@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Message as MessageType } from '../types';
 import Message from './Message';
 import { ThreeDots } from 'react-loader-spinner';
@@ -7,9 +7,10 @@ interface ChatAreaProps {
   messages: MessageType[];
   conversationTitle?: string;
   isLoading?: boolean;
+  hideAnalysisResult?: boolean;
 }
 
-const ChatArea: React.FC<ChatAreaProps> = ({ messages, conversationTitle, isLoading }) => {
+const ChatArea: React.FC<ChatAreaProps> = React.memo(({ messages, conversationTitle, isLoading, hideAnalysisResult = false }) => {
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
@@ -17,10 +18,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({ messages, conversationTitle, isLoad
           <div className="text-2xl">✨</div>
         </div>
         <h2 className="text-3xl font-bold text-gray-900 mb-4">
-          Rise Above Average
+          貼文內容評估工具
         </h2>
         <p className="text-lg text-gray-600 mb-8 max-w-2xl">
-          Analyze your content by calculating ATI score.
+          上傳您的貼文和圖片，立即獲取內容雷同性指數 (ATI) 分析
         </p>
 {/*        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl w-full">
@@ -71,7 +72,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({ messages, conversationTitle, isLoad
       
       <div className="divide-y divide-gray-200">
         {messages.map((message) => (
-          <Message key={message.id} message={message} />
+          <Message key={message.id} message={message} hideAnalysisResult={hideAnalysisResult} />
         ))}
 
         {isLoading && (
@@ -84,13 +85,15 @@ const ChatArea: React.FC<ChatAreaProps> = ({ messages, conversationTitle, isLoad
                 ariaLabel="loading"
                 visible
               />
-              <span className="text-sm text-gray-600">Analyzing...</span>
+              <span className="text-sm text-gray-600">分析中...</span>
             </div>
           </div>
         )}
       </div>
     </div>
   );
-};
+});
+
+ChatArea.displayName = "ChatArea";
 
 export default ChatArea;

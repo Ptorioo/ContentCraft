@@ -13,7 +13,7 @@ export const useConversations = () => {
   const createNewConversation = () => {
     const newConversation: Conversation = {
       id: Math.random().toString(36).substr(2, 9),
-      title: 'New conversation',
+      title: 'New post',
       messages: [],
       lastUpdated: new Date()
     };
@@ -45,7 +45,7 @@ export const useConversations = () => {
         return {
           ...conv,
           messages: updatedMessages,
-          title: conv.title === 'New conversation' && isUser ?
+          title: conv.title === 'New post' && isUser ?
             content.slice(0, 50) + (content.length > 50 ? '...' : '') :
             conv.title,
           lastUpdated: new Date()
@@ -63,7 +63,9 @@ export const useConversations = () => {
           content: aiResult.text,
           isUser: false,
           timestamp: new Date(),
-          analyticsData: aiResult.analytics,
+          postAnalysisData: aiResult.analysisData,
+          originalUserContent: content, // 保存原始用戶輸入的文字
+          originalUserImage: file, // 保存原始用戶上傳的圖片
         };
         setConversations(prev => prev.map(conv => {
           if (conv.id === convId) {

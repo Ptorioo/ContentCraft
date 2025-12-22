@@ -190,20 +190,20 @@ const BrandDashboard: React.FC = () => {
   // 使用總覽分析中 ATI 時間序列的顏色：Novelty (#e9c7c6) 和 Diversity (#9fc3d0)
   const comparisonData = brand1Details && brand2Details ? {
     ati: [
-      { name: '品牌 1', value: brand1Details.ATI_final_mean, color: '#e9c7c6' },
-      { name: '品牌 2', value: brand2Details.ATI_final_mean, color: '#9fc3d0' },
+      { name: '你的品牌', value: brand1Details.ATI_final_mean, color: '#e9c7c6' },
+      { name: '對手品牌', value: brand2Details.ATI_final_mean, color: '#9fc3d0' },
     ],
     ds: [
-      { name: '品牌 1', value: brand1Details.DS_final_mean * 100, color: '#e9c7c6' },
-      { name: '品牌 2', value: brand2Details.DS_final_mean * 100, color: '#9fc3d0' },
+      { name: '你的品牌', value: brand1Details.DS_final_mean * 100, color: '#e9c7c6' },
+      { name: '對手品牌', value: brand2Details.DS_final_mean * 100, color: '#9fc3d0' },
     ],
     engagement: [
-      { name: '品牌 1', value: brand1Details.y_mean, color: '#e9c7c6' },
-      { name: '品牌 2', value: brand2Details.y_mean, color: '#9fc3d0' },
+      { name: '你的品牌', value: brand1Details.y_mean, color: '#e9c7c6' },
+      { name: '對手品牌', value: brand2Details.y_mean, color: '#9fc3d0' },
     ],
     posts: [
-      { name: '品牌 1', value: brand1Details.n_posts, color: '#e9c7c6' },
-      { name: '品牌 2', value: brand2Details.n_posts, color: '#9fc3d0' },
+      { name: '你的品牌', value: brand1Details.n_posts, color: '#e9c7c6' },
+      { name: '對手品牌', value: brand2Details.n_posts, color: '#9fc3d0' },
     ],
   } : null;
 
@@ -471,7 +471,7 @@ const BrandDashboard: React.FC = () => {
           你最相似的三篇貼文（最平庸）
         </h3>
         <p className="text-sm text-gray-500 mb-4">
-          這些貼文與市場平均最相似，代表內容同質化程度最高
+          這些貼文與市場平均最相似，代表內容雷同性程度最高
         </p>
         <div className="space-y-4">
           {brandDetails.mostAveragePosts.slice(0, 3).map((post, idx) => {
@@ -520,10 +520,10 @@ const BrandDashboard: React.FC = () => {
         {/* 品牌選擇區域 */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* 品牌 1 選擇 */}
+            {/* 你的品牌選擇 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                品牌 1
+                你的品牌
               </label>
               <div className="relative">
                 <select
@@ -539,7 +539,7 @@ const BrandDashboard: React.FC = () => {
                   className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-opacity-50 bg-white text-gray-900"
                   style={{ borderColor: '#e9c7c6', zIndex: 10 }}
                 >
-                  <option value="">-- 選擇品牌 1 --</option>
+                  <option value="">-- 選擇你的品牌 --</option>
                   {brands.map((b) => (
                     <option key={b.brand} value={b.brand} disabled={b.brand === brand2}>
                       {formatBrandName(b.brand)}
@@ -562,10 +562,10 @@ const BrandDashboard: React.FC = () => {
               )}
             </div>
 
-            {/* 品牌 2 選擇 */}
+            {/* 對手品牌選擇 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                品牌 2
+                對手品牌
               </label>
               <div className="relative">
                 <select
@@ -581,7 +581,7 @@ const BrandDashboard: React.FC = () => {
                   className="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-opacity-50 bg-white text-gray-900"
                   style={{ borderColor: '#9fc3d0', zIndex: 10 }}
                 >
-                  <option value="">-- 選擇品牌 2 --</option>
+                  <option value="">-- 選擇對手品牌 --</option>
                   {brands.map((b) => (
                     <option key={b.brand} value={b.brand} disabled={b.brand === brand1}>
                       {formatBrandName(b.brand)}
@@ -637,12 +637,12 @@ const BrandDashboard: React.FC = () => {
                     {getWinner(brand1Details.ATI_final_mean, brand2Details.ATI_final_mean, true) === 1 ? (
                       <div className="flex items-center gap-1 text-green-600 text-sm font-medium">
                         <Award size={14} />
-                        <span>{formatBrandName(brand1)} 勝出（較低 ATI = 較新穎）</span>
+                        <span>{formatBrandName(brand1)}勝出（較低 ATI = 較新穎）</span>
                       </div>
                     ) : getWinner(brand1Details.ATI_final_mean, brand2Details.ATI_final_mean, true) === 2 ? (
-                      <div className="flex items-center gap-1 text-green-600 text-sm font-medium">
+                      <div className="flex items-center gap-1 text-red-600 text-sm font-medium">
                         <Award size={14} />
-                        <span>{formatBrandName(brand2)} 勝出（較低 ATI = 較新穎）</span>
+                        <span>{formatBrandName(brand2)}勝出（較低 ATI = 較新穎）</span>
                       </div>
                     ) : (
                       <div className="text-gray-500 text-sm">平手</div>
@@ -677,12 +677,12 @@ const BrandDashboard: React.FC = () => {
                     {getWinner(brand1Details.y_mean, brand2Details.y_mean) === 1 ? (
                       <div className="flex items-center gap-1 text-green-600 text-sm font-medium">
                         <Award size={14} />
-                        <span>{formatBrandName(brand1)} 勝出</span>
+                        <span>{formatBrandName(brand1)}勝出</span>
                       </div>
                     ) : getWinner(brand1Details.y_mean, brand2Details.y_mean) === 2 ? (
-                      <div className="flex items-center gap-1 text-green-600 text-sm font-medium">
+                      <div className="flex items-center gap-1 text-red-600 text-sm font-medium">
                         <Award size={14} />
-                        <span>{formatBrandName(brand2)} 勝出</span>
+                        <span>{formatBrandName(brand2)}勝出</span>
                       </div>
                     ) : (
                       <div className="text-gray-500 text-sm">平手</div>
@@ -717,12 +717,12 @@ const BrandDashboard: React.FC = () => {
                     {getWinner(brand1Details.n_posts, brand2Details.n_posts) === 1 ? (
                       <div className="flex items-center gap-1 text-green-600 text-sm font-medium">
                         <Award size={14} />
-                        <span>{formatBrandName(brand1)} 更多</span>
+                        <span>{formatBrandName(brand1)}更多</span>
                       </div>
                     ) : getWinner(brand1Details.n_posts, brand2Details.n_posts) === 2 ? (
-                      <div className="flex items-center gap-1 text-green-600 text-sm font-medium">
+                      <div className="flex items-center gap-1 text-red-600 text-sm font-medium">
                         <Award size={14} />
-                        <span>{formatBrandName(brand2)} 更多</span>
+                        <span>{formatBrandName(brand2)}更多</span>
                       </div>
                     ) : (
                       <div className="text-gray-500 text-sm">相同</div>
@@ -740,16 +740,16 @@ const BrandDashboard: React.FC = () => {
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={[
-                      { name: 'ATI', 品牌1: brand1Details.ATI_final_mean, 品牌2: brand2Details.ATI_final_mean },
-                      { name: '貼文數', 品牌1: brand1Details.n_posts, 品牌2: brand2Details.n_posts },
+                      { name: 'ATI', '你的品牌': brand1Details.ATI_final_mean, '對手品牌': brand2Details.ATI_final_mean },
+                      { name: '貼文數', '你的品牌': brand1Details.n_posts, '對手品牌': brand2Details.n_posts },
                     ]}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="name" stroke="#6b7280" />
                       <YAxis stroke="#6b7280" />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="品牌1" fill="#e9c7c6" name={formatBrandName(brand1)} />
-                      <Bar dataKey="品牌2" fill="#9fc3d0" name={formatBrandName(brand2)} />
+                      <Bar dataKey="你的品牌" fill="#e9c7c6" name={formatBrandName(brand1)} />
+                      <Bar dataKey="對手品牌" fill="#9fc3d0" name={formatBrandName(brand2)} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -780,9 +780,9 @@ const BrandDashboard: React.FC = () => {
                         </td>
                         <td className="py-3 px-4 text-center">
                           {getWinner(brand1Details.ATI_final_mean, brand2Details.ATI_final_mean, true) === 1 ? (
-                            <span className="text-green-600 font-medium">品牌 1</span>
+                            <span className="text-green-600 font-medium">{formatBrandName(brand1)}</span>
                           ) : getWinner(brand1Details.ATI_final_mean, brand2Details.ATI_final_mean, true) === 2 ? (
-                            <span className="text-green-600 font-medium">品牌 2</span>
+                            <span className="text-red-600 font-medium">{formatBrandName(brand2)}</span>
                           ) : (
                             <span className="text-gray-500">平手</span>
                           )}
@@ -804,9 +804,9 @@ const BrandDashboard: React.FC = () => {
                         </td>
                         <td className="py-3 px-4 text-center">
                           {getWinner(brand1Details.y_mean, brand2Details.y_mean) === 1 ? (
-                            <span className="text-green-600 font-medium">品牌 1</span>
+                            <span className="text-green-600 font-medium">{formatBrandName(brand1)}</span>
                           ) : getWinner(brand1Details.y_mean, brand2Details.y_mean) === 2 ? (
-                            <span className="text-green-600 font-medium">品牌 2</span>
+                            <span className="text-red-600 font-medium">{formatBrandName(brand2)}</span>
                           ) : (
                             <span className="text-gray-500">平手</span>
                           )}
@@ -822,9 +822,9 @@ const BrandDashboard: React.FC = () => {
                         </td>
                         <td className="py-3 px-4 text-center">
                           {getWinner(brand1Details.n_posts, brand2Details.n_posts) === 1 ? (
-                            <span className="text-green-600 font-medium">品牌 1</span>
+                            <span className="text-green-600 font-medium">{formatBrandName(brand1)}</span>
                           ) : getWinner(brand1Details.n_posts, brand2Details.n_posts) === 2 ? (
-                            <span className="text-green-600 font-medium">品牌 2</span>
+                            <span className="text-red-600 font-medium">{formatBrandName(brand2)}</span>
                           ) : (
                             <span className="text-gray-500">相同</span>
                           )}
@@ -845,8 +845,8 @@ const BrandDashboard: React.FC = () => {
               {!brand1 && !brand2 
                 ? '請選擇兩個品牌開始對比分析'
                 : !brand1 
-                  ? '請選擇品牌 1'
-                  : '請選擇品牌 2'}
+                  ? '請選擇你的品牌'
+                  : '請選擇對手品牌'}
             </p>
           </div>
         )}

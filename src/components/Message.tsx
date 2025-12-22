@@ -1,86 +1,82 @@
-import React from "react";
-import { User, Sparkles } from "lucide-react";
+import React, { useMemo } from "react";
 import { Message as MessageType } from "../types";
 import AnalyticsDashboard from "./AnalyticsDashboard";
+import PostAnalysisResult from "./PostAnalysisResult";
 
 interface MessageProps {
   message: MessageType;
+  hideAnalysisResult?: boolean;
 }
 
-const Message: React.FC<MessageProps> = ({ message }) => {
+const Message: React.FC<MessageProps> = React.memo(({ message, hideAnalysisResult = false }) => {
+  // 優化：使用 useMemo 緩存文本處理結果
+  const formattedContent = useMemo(() => {
+    if (!message.content) return null;
+    
+    const lines = message.content.split("\n");
+    return lines.map((line, idx) => {
+      const isAtiLine = !message.isUser && line.trim().startsWith("ATI score:");
+      const isLower = !message.isUser && line.includes("Lower than average");
+      const isHigher = !message.isUser && line.includes("Higher than average");
+
+      let className = "mb-2";
+      if (isAtiLine) {
+        className = "mb-2 font-semibold text-lg";
+      } else if (isLower) {
+        className = "mb-2 text-red-600 font-medium";
+      } else if (isHigher) {
+        className = "mb-2 text-green-600 font-medium";
+      }
+
+      return (
+        <div key={idx} className={className}>
+          {line}
+        </div>
+      );
+    });
+  }, [message.content, message.isUser]);
+
   return (
     <div
-      className={`flex items-start space-x-4 p-6 ${
+      className={`p-6 ${
         !message.isUser ? "bg-gray-50" : ""
       }`}
     >
-      {/* Avatar */}
-      <div
-        className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
-        ${
-          message.isUser
-            ? "bg-purple-600"
-            : "bg-gradient-to-br from-green-500 to-emerald-600"
-        }
-      `}
-      >
-        {message.isUser ? (
-          <User size={16} className="text-white" />
-        ) : (
-          <Sparkles size={16} className="text-white" />
-        )}
-      </div>
-
       {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div
-          className={`prose max-w-none ${
-            message.isUser ? "prose-sm" : "prose-base"
-          }`}
-        >
-          {/* Text content with line-based styling */}
+      <div className="w-full">
+        <div className="whitespace-pre-wrap leading-relaxed">
           <div
-            className={`whitespace-pre-wrap leading-relaxed ${
+            className={
               message.isUser
-                ? "text-gray-800"
+                ? "text-gray-800 text-sm"
                 : "text-gray-900 text-[0.95rem] md:text-base"
-            }`}
+            }
           >
-            {message.content.split("\n").map((line, idx) => {
-              const isAtiLine = line.trim().startsWith("ATI score:");
-              const isLower = line.includes("Lower than average");
-              const isHigher = line.includes("Higher than average");
-
-              let className = "mb-3";
-              if (!message.isUser && isAtiLine) {
-                className += " font-semibold text-lg";
-              }
-              if (!message.isUser && isLower) {
-                className += " text-red-600 font-medium";
-              }
-              if (!message.isUser && isHigher) {
-                className += " text-green-600 font-medium";
-              }
-
-              return (
-                <div key={idx} className={className}>
-                  {line}
-                </div>
-              );
-            })}
+            {formattedContent}
           </div>
 
           {message.attachment &&
             message.attachment.type?.startsWith("image/") && (
               <img
                 src={message.attachment.url}
-                alt={message.attachment.name}
+                alt={message.attachment.name || "Attachment"}
                 className="mt-3 max-w-full rounded-lg border object-contain max-h-80"
+                loading="lazy"
               />
             )}
 
-          {/* Shorter gap between text and dashboard */}
-          {!message.isUser && message.analyticsData && (
+          {/* 單一貼文分析結果（優先顯示）- 如果 hideAnalysisResult 為 true，則不顯示 */}
+          {!message.isUser && message.postAnalysisData && !hideAnalysisResult && (
+            <div className="mt-3">
+              <PostAnalysisResult
+                analysisData={message.postAnalysisData}
+                originalText={message.originalUserContent || ''}
+                originalImage={message.originalUserImage}
+              />
+            </div>
+          )}
+          {/* 保留向後兼容：完整的 Analytics Dashboard */}
+          {!message.isUser && !message.postAnalysisData && message.analyticsData && (
             <div className="mt-3">
               <AnalyticsDashboard
                 data={message.analyticsData}
@@ -96,6 +92,8 @@ const Message: React.FC<MessageProps> = ({ message }) => {
       </div>
     </div>
   );
-};
+});
+
+Message.displayName = "Message";
 
 export default Message;

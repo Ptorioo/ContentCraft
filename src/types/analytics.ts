@@ -88,6 +88,8 @@ export interface ScenarioAdjustment {
   title: string;
   description: string;
   adjustedAti: number;
+  adjustedNovelty?: number;
+  adjustedDiversity?: number;
   changes: string[];
 }
 

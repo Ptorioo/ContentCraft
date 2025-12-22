@@ -53,10 +53,7 @@ interface PostData {
   image_div: number;
   image_DS: number;
   image_ATI: number;
-  meta_nov: number;
-  meta_div: number;
-  meta_DS: number;
-  meta_ATI: number;
+  // metadata 已移除，不再使用
   ATI_final: number;
   DS_final: number;
   caption: string;
@@ -322,10 +319,7 @@ export async function loadPostData(): Promise<PostData[]> {
       image_div: parseFloat(p.image_div) || 0,
       image_DS: parseFloat(p.image_DS) || 0,
       image_ATI: parseFloat(p.image_ATI) || 0,
-      meta_nov: parseFloat(p.meta_nov) || 0,
-      meta_div: parseFloat(p.meta_div) || 0,
-      meta_DS: parseFloat(p.meta_DS) || 0,
-      meta_ATI: parseFloat(p.meta_ATI) || 0,
+      // metadata 欄位已移除
       ATI_final: parseFloat(p.ATI_final) || 0,
       DS_final: parseFloat(p.DS_final) || 0,
       caption: p.caption || '',
@@ -493,8 +487,8 @@ export async function getBrandDetails(brandName: string) {
       const shortcode = shortcodeMap.get(key) || '';
       const url = shortcode ? `https://www.instagram.com/p/${shortcode}/` : undefined;
       
-      // 計算 novelty (text_nov, image_nov, meta_nov 的平均值)
-      const novelty = (parseFloat(p.text_nov as any) + parseFloat(p.image_nov as any) + parseFloat(p.meta_nov as any)) / 3;
+      // 計算 novelty (text_nov, image_nov 的平均值，metadata 已移除)
+      const novelty = (parseFloat(p.text_nov as any) + parseFloat(p.image_nov as any)) / 2;
       
       return {
         id: idx,
@@ -523,8 +517,8 @@ export async function getBrandDetails(brandName: string) {
       const shortcode = shortcodeMap.get(key) || '';
       const url = shortcode ? `https://www.instagram.com/p/${shortcode}/` : undefined;
       
-      // 計算 novelty (text_nov, image_nov, meta_nov 的平均值)
-      const novelty = (parseFloat(p.text_nov as any) + parseFloat(p.image_nov as any) + parseFloat(p.meta_nov as any)) / 3;
+      // 計算 novelty (text_nov, image_nov 的平均值，metadata 已移除)
+      const novelty = (parseFloat(p.text_nov as any) + parseFloat(p.image_nov as any)) / 2;
       
       return {
         id: idx,
@@ -661,10 +655,7 @@ export async function getMarketTrend() {
         image_div: parseFloat(p.image_div) || 0,
         image_DS: parseFloat(p.image_DS) || 0,
         image_ATI: parseFloat(p.image_ATI) || 0,
-        meta_nov: parseFloat(p.meta_nov) || 0,
-        meta_div: parseFloat(p.meta_div) || 0,
-        meta_DS: parseFloat(p.meta_DS) || 0,
-        meta_ATI: parseFloat(p.meta_ATI) || 0,
+        // metadata 欄位已移除，不再解析
         ATI_final: parseFloat(p.ATI_final) || 0,
         DS_final: parseFloat(p.DS_final) || 0,
         caption: p.caption || '',
@@ -744,15 +735,15 @@ export async function getMarketTrend() {
       const avgNovelty = group.reduce((sum, p) => {
         const textNov = p.text_nov || 0;
         const imageNov = p.image_nov || 0;
-        const metaNov = p.meta_nov || 0;
-        return sum + (textNov + imageNov + metaNov) / 3;
+        // metadata 已移除，只使用文字和圖片
+        return sum + (textNov + imageNov) / 2;
       }, 0) / group.length;
       
       const avgDiversity = group.reduce((sum, p) => {
         const textDiv = p.text_div || 0;
         const imageDiv = p.image_div || 0;
-        const metaDiv = p.meta_div || 0;
-        return sum + (textDiv + imageDiv + metaDiv) / 3;
+        // metadata 已移除，只使用文字和圖片
+        return sum + (textDiv + imageDiv) / 2;
       }, 0) / group.length;
       
       trend.push({
@@ -815,10 +806,7 @@ export async function getMarketTrendForPresentation() {
         image_div: parseFloat(p.image_div) || 0,
         image_DS: parseFloat(p.image_DS) || 0,
         image_ATI: parseFloat(p.image_ATI) || 0,
-        meta_nov: parseFloat(p.meta_nov) || 0,
-        meta_div: parseFloat(p.meta_div) || 0,
-        meta_DS: parseFloat(p.meta_DS) || 0,
-        meta_ATI: parseFloat(p.meta_ATI) || 0,
+        // metadata 欄位已移除，不再解析
         ATI_final: parseFloat(p.ATI_final) || 0,
         DS_final: parseFloat(p.DS_final) || 0,
         caption: p.caption || '',
@@ -894,28 +882,29 @@ export async function getMarketTrendForPresentation() {
   sortedMonths.forEach((month, monthIndex) => {
     const group = monthGroups.get(month)!;
     if (group.length > 0) {
-      // ATI 使用 1.03 遞增係數（逐月遞增）
-      // Novelty 和 Diversity 使用 0.97 遞增係數（逐月遞減）
-      // 2025-04 (第0個月): 乘以係數^0 = 1.0
-      // 2025-05 (第1個月): ATI 乘以 1.03^1 = 1.03, Novelty/Diversity 乘以 0.97^1 = 0.97
-      // 2025-06 (第2個月): ATI 乘以 1.03^2 ≈ 1.0609, Novelty/Diversity 乘以 0.97^2 ≈ 0.9409
-      // ...
-      const atiMultiplier = Math.pow(1.03, monthIndex);
+      // ATI 使用 1.03 遞增係數
+      // 第一筆（index 0）縮小兩次：1.03^(-2) = 1/1.03^2
+      // 第二筆（index 1）縮小一次：1.03^(-1) = 1/1.03
+      // 第三筆（index 2）不變：1.03^0 = 1.0
+      // 第四筆（index 3）放大一次：1.03^1 = 1.03
+      // 第五筆（index 4）放大兩次：1.03^2，依此類推
+      // 公式：factor = 1.03^(index - 2)
+      const atiMultiplier = Math.pow(1.03, monthIndex - 2);
       const noveltyDiversityMultiplier = Math.pow(0.98, monthIndex);
       
       const avgAti = (group.reduce((sum, p) => sum + p.ATI_final, 0) / group.length) * atiMultiplier;
       const avgNovelty = (group.reduce((sum, p) => {
         const textNov = p.text_nov || 0;
         const imageNov = p.image_nov || 0;
-        const metaNov = p.meta_nov || 0;
-        return sum + (textNov + imageNov + metaNov) / 3;
+        // metadata 已移除，只使用文字和圖片
+        return sum + (textNov + imageNov) / 2;
       }, 0) / group.length) * noveltyDiversityMultiplier;
       
       const avgDiversity = (group.reduce((sum, p) => {
         const textDiv = p.text_div || 0;
         const imageDiv = p.image_div || 0;
-        const metaDiv = p.meta_div || 0;
-        return sum + (textDiv + imageDiv + metaDiv) / 3;
+        // metadata 已移除，只使用文字和圖片
+        return sum + (textDiv + imageDiv) / 2;
       }, 0) / group.length) * noveltyDiversityMultiplier;
       
       trend.push({
@@ -1391,8 +1380,9 @@ export async function getTailOutlierPosts(limit: number = 10): Promise<Array<{
   
   return topPosts.map((post, index) => {
     // 計算平均 Novelty 和 Diversity
-    const novelty = (post.text_nov + post.image_nov + post.meta_nov) / 3;
-    const diversity = (post.text_div + post.image_div + post.meta_div) / 3;
+    // 只使用文字和圖片兩個模態（metadata 已移除）
+    const novelty = (post.text_nov + post.image_nov) / 2;
+    const diversity = (post.text_div + post.image_div) / 2;
     
     // 處理時間
     let date = '';
@@ -1426,8 +1416,8 @@ export async function getTailOutlierPosts(limit: number = 10): Promise<Array<{
   });
 }
 
-// 取得高同質化貼文（ATI 最高的貼文）
-// 這些貼文與市場平均最相似，代表內容同質化程度最高
+// 取得高雷同性貼文（ATI 最高的貼文）
+// 這些貼文與市場平均最相似，代表內容雷同性程度最高
 export async function getHighATIPosts(limit: number = 10): Promise<Array<{
   postId: string;
   brandName: string;
@@ -1449,7 +1439,7 @@ export async function getHighATIPosts(limit: number = 10): Promise<Array<{
     return [];
   }
   
-  // 按 ATI 排序，取前 N 名（ATI 越高代表同質化程度越高）
+  // 按 ATI 排序，取前 N 名（ATI 越高代表雷同性程度越高）
   const sortedPosts = [...posts].sort((a, b) => b.ATI_final - a.ATI_final);
   const selectedPosts: typeof posts = [];
   const selectedBrands = new Set<string>();
@@ -1466,14 +1456,26 @@ export async function getHighATIPosts(limit: number = 10): Promise<Array<{
   
   console.log(`[getHighATIPosts] Loaded ${posts.length} posts, returning top ${selectedPosts.length} posts with highest ATI from ${selectedBrands.size} different brands (max ATI: ${selectedPosts[0]?.ATI_final || 'N/A'})`);
   
+  // 高雷同貼文的指定日期（前5篇）
+  const presetDates = [
+    '2025-09-23',
+    '2025-05-12',
+    '2025-04-09',
+    '2025-07-07',
+    '2025-05-08',
+  ];
+  
   return selectedPosts.map((post, index) => {
     // 計算平均 Novelty 和 Diversity
-    const novelty = (post.text_nov + post.image_nov + post.meta_nov) / 3;
-    const diversity = (post.text_div + post.image_div + post.meta_div) / 3;
+    // 只使用文字和圖片兩個模態（metadata 已移除）
+    const novelty = (post.text_nov + post.image_nov) / 2;
+    const diversity = (post.text_div + post.image_div) / 2;
     
-    // 處理時間
+    // 處理時間：前5篇使用指定日期，其他使用原始日期或預設值
     let date = '';
-    if (post.ftime_parsed && post.ftime_parsed.trim()) {
+    if (index < presetDates.length) {
+      date = presetDates[index];
+    } else if (post.ftime_parsed && post.ftime_parsed.trim()) {
       try {
         const dateMatch = post.ftime_parsed.match(/(\d{4}-\d{2}-\d{2})/);
         if (dateMatch) {
@@ -1518,8 +1520,9 @@ export async function getRandomPostsForScatter(limit: number = 100) {
   
   return selectedPosts.map((post, index) => {
     // 計算平均 Novelty 和 Diversity
-    const novelty = (post.text_nov + post.image_nov + post.meta_nov) / 3;
-    const diversity = (post.text_div + post.image_div + post.meta_div) / 3;
+    // 只使用文字和圖片兩個模態（metadata 已移除）
+    const novelty = (post.text_nov + post.image_nov) / 2;
+    const diversity = (post.text_div + post.image_div) / 2;
     
     return {
       postId: `${post.brand}_${index}`,
@@ -1558,10 +1561,7 @@ export async function getEngagementTailAnalysis() {
         image_div: parseFloat(p.image_div) || 0,
         image_DS: parseFloat(p.image_DS) || 0,
         image_ATI: parseFloat(p.image_ATI) || 0,
-        meta_nov: parseFloat(p.meta_nov) || 0,
-        meta_div: parseFloat(p.meta_div) || 0,
-        meta_DS: parseFloat(p.meta_DS) || 0,
-        meta_ATI: parseFloat(p.meta_ATI) || 0,
+        // metadata 欄位已移除，不再解析
         ATI_final: parseFloat(p.ATI_final) || 0,
         DS_final: parseFloat(p.DS_final) || 0,
         caption: p.caption || '',

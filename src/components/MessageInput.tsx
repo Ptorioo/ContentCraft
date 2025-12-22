@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip } from 'lucide-react';
 
 interface MessageInputProps {
@@ -10,6 +10,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, disabled = f
   const [input, setInput] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,6 +20,10 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, disabled = f
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+      }
+      // 重置 textarea 高度
+      if (textareaRef.current) {
+        textareaRef.current.style.height = '48px';
       }
     }
   };
@@ -44,12 +49,12 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, disabled = f
     }
   };
 
-  const suggestionPrompts = [
-    "Review my resume for a marketing manager position",
-    "Help me write a compelling self-introduction for networking events",
-    "Improve my LinkedIn summary to attract more opportunities",
-    "Create a cover letter that stands out from generic templates"
-  ];
+  // 當 input 清空時，重置 textarea 高度
+  useEffect(() => {
+    if (!input && textareaRef.current) {
+      textareaRef.current.style.height = '48px';
+    }
+  }, [input]);
 
   return (
     <div className="border-t border-gray-200 bg-white">
@@ -104,21 +109,25 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, disabled = f
             </button>
             
             <textarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Describe your content that needs improvement..."
+              placeholder="輸入貼文文字內容..."
               disabled={disabled}
-              className="flex-1 min-h-[48px] max-h-32 resize-none border-none outline-none px-0 py-3 text-gray-900 placeholder-gray-500"
+              className="flex-1 min-h-[48px] max-h-[128px] resize-none border-none outline-none px-0 py-3 text-gray-900 placeholder-gray-500 overflow-y-auto"
               rows={1}
               style={{
-                height: 'auto',
-                minHeight: '48px'
+                height: '48px',
+                minHeight: '48px',
+                maxHeight: '128px'
               }}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
-                target.style.height = 'auto';
-                target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+                target.style.height = '48px';
+                if (target.scrollHeight > 48) {
+                  target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+                }
               }}
             />
             
@@ -137,10 +146,6 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, disabled = f
             </button>
           </div>
         </form>
-        
-        <p className="text-xs text-gray-500 text-center mt-3">
-          ContentCraft can help improve your professional content. Always review suggestions before using.
-        </p>
       </div>
     </div>
   );

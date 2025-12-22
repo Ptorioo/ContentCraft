@@ -30,12 +30,10 @@ def load_artifacts():
     centers = {
         "text":  np.load(ART_DIR / "centers_text.npy"),
         "image": np.load(ART_DIR / "centers_image.npy"),
-        "meta":  np.load(ART_DIR / "centers_meta.npy"),
     }
-    scaler = joblib.load(ART_DIR / "numeric_scaler.joblib")
     with open(ART_DIR / "config.json", "r", encoding="utf-8") as f:
         cfg = json.load(f)
-    return centers, scaler, cfg
+    return centers, cfg
 
 def _norm_rows(x): n = np.linalg.norm(x, axis=1, keepdims=True) + 1e-9; return (x / n).astype(np.float32)
 def _softmax_rows(x, tau):
@@ -53,7 +51,8 @@ def compute_DS_for_modality(X, centers, wN, wD, nov_min, nov_max, tau):
         nov = np.clip(nov, 0.0, 1.0)
     probs = _softmax_rows(sims, tau=tau)
     ent = -(probs * (np.log(probs + 1e-9))).sum(axis=1) / (math.log(sims.shape[1]) + 1e-9)
-    return (wN * nov + wD * ent).astype(np.float32)
+    DS = (wN * nov + wD * ent).astype(np.float32)
+    return DS
 
 def parse_rel_img_paths(cell):
     if pd.isna(cell): return []
@@ -198,8 +197,11 @@ def embed_images_clip(pil_images):
     return arr.astype(np.float32)
 
 def compute_ati_for_df(df: pd.DataFrame) -> pd.DataFrame:
-    centers, scaler, cfg = load_artifacts()
-    TAU = cfg["TAU"]; v = np.array(cfg["phase2_v"], dtype=np.float32)
+    centers, cfg = load_artifacts()
+    TAU = cfg["TAU"]
+    # 只使用文字和圖片兩個模態，不使用 metadata
+    # phase2_v 現在只有 [text_weight, image_weight]
+    v = np.array(cfg["phase2_v"][:2], dtype=np.float32) if len(cfg["phase2_v"]) >= 2 else np.array([0.0, 1.0], dtype=np.float32)
 
     rel_lists = df["rel_img_paths"].apply(parse_rel_img_paths).tolist()
     ocr_texts = []
@@ -231,22 +233,14 @@ def compute_ati_for_df(df: pd.DataFrame) -> pd.DataFrame:
         img_vecs.append(vec_mean.astype(np.float32))
     image_vec = np.vstack(img_vecs)
 
-    numeric_df = build_numeric_features(df.assign(ocr_text=""), "sum", None, "ftime_parsed")
-    numeric_df = build_numeric_features(df.assign(ocr_text=ocr_texts), "sum", "ocr_text", "ftime_parsed")
-    numeric_z = pd.DataFrame(
-        joblib.load(ART_DIR / "numeric_scaler.joblib").transform(numeric_df),
-        columns=numeric_df.columns, index=df.index
-    ).values.astype(np.float32)
-
-    DS_text  = compute_DS_for_modality(text_vec,  centers["text"],  cfg["phase1"]["text"]["wN"],  cfg["phase1"]["text"]["wD"],  cfg["phase1"]["text"]["nov_min"],  cfg["phase1"]["text"]["nov_max"],  TAU)
+    DS_text = compute_DS_for_modality(text_vec,  centers["text"],  cfg["phase1"]["text"]["wN"],  cfg["phase1"]["text"]["wD"],  cfg["phase1"]["text"]["nov_min"],  cfg["phase1"]["text"]["nov_max"],  TAU)
     DS_image = compute_DS_for_modality(image_vec, centers["image"], cfg["phase1"]["image"]["wN"], cfg["phase1"]["image"]["wD"], cfg["phase1"]["image"]["nov_min"], cfg["phase1"]["image"]["nov_max"], TAU)
-    DS_meta  = compute_DS_for_modality(numeric_z, centers["meta"],  cfg["phase1"]["meta"]["wN"],  cfg["phase1"]["meta"]["wD"],  cfg["phase1"]["meta"]["nov_min"],  cfg["phase1"]["meta"]["nov_max"],  TAU)
 
-    DS_final = (v[0]*DS_text + v[1]*DS_image + v[2]*DS_meta).astype(np.float32)
+    DS_final = (v[0]*DS_text + v[1]*DS_image).astype(np.float32)
     ATI = 100.0*(1.0 - DS_final)
 
     out = df[["brand","sum","rel_img_paths","ftime_parsed"]].copy()
-    out["DS_text"]=DS_text; out["DS_image"]=DS_image; out["DS_meta"]=DS_meta
+    out["DS_text"]=DS_text; out["DS_image"]=DS_image
     out["DS_final"]=DS_final; out["ATI_final"]=ATI
     out["ocr_text"]=ocr_texts
     return out
@@ -267,7 +261,6 @@ def compute_ati_single(text: str, rel_img_paths: str | None = None) -> dict:
         "components": {
             "DS_text":  float(row["DS_text"]),
             "DS_image": float(row["DS_image"]),
-            "DS_meta":  float(row["DS_meta"]),
             "DS_final": float(row["DS_final"]),
         },
         "ocr_text": row["ocr_text"],

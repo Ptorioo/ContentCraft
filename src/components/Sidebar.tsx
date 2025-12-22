@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, MessageSquare, FileText, User, Briefcase, X } from 'lucide-react';
+import { Plus, MessageSquare, FileText, User, Briefcase, X, PanelLeftClose } from 'lucide-react';
 import { Conversation } from '../types';
 
 interface SidebarProps {
@@ -9,6 +9,8 @@ interface SidebarProps {
   onNewConversation: () => void;
   isOpen: boolean;
   onClose: () => void;
+  onToggleCollapse?: () => void;
+  showCollapseButton?: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -17,7 +19,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   onSelectConversation,
   onNewConversation,
   isOpen,
-  onClose
+  onClose,
+  onToggleCollapse,
+  showCollapseButton = false
 }) => {
   const samplePrompts = [
     {
@@ -49,23 +53,32 @@ const Sidebar: React.FC<SidebarProps> = ({
       
       {/* Sidebar */}
       <aside className={`
-        fixed lg:relative top-0 left-0 h-full w-80 bg-gray-50 border-r border-gray-200 z-50
+        fixed lg:relative top-0 left-0 h-full w-full lg:w-full bg-gray-50 border-r border-gray-200 z-50
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         flex flex-col
       `}>
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="px-4 pt-3 pb-2 border-b border-gray-200 flex items-center gap-2 flex-shrink-0">
           <button
             onClick={onNewConversation}
-            className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-3 flex items-center space-x-3 hover:bg-gray-50 transition-colors text-left"
+            className="flex-1 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 flex items-center space-x-2 hover:bg-gray-50 transition-colors text-left"
           >
-            <Plus size={18} className="text-gray-600" />
-            <span className="text-gray-700 font-medium">New conversation</span>
+            <Plus size={16} className="text-gray-600" />
+            <span className="text-gray-700 font-medium text-xs">新增貼文檢測</span>
           </button>
+          {showCollapseButton && onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className="p-1.5 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 transition-colors"
+              title="收合側邊欄"
+            >
+              <PanelLeftClose className="w-4 h-4 text-gray-600" />
+            </button>
+          )}
           <button
             onClick={onClose}
-            className="lg:hidden ml-3 p-2 hover:bg-gray-200 rounded-lg transition-colors"
+            className="lg:hidden p-2 hover:bg-gray-200 rounded-lg transition-colors"
           >
             <X size={18} />
           </button>
@@ -98,7 +111,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 */}
         {/* Conversation History */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">Recent</h3>
           <div className="space-y-1">
             {conversations.map((conversation) => (
@@ -122,12 +135,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200">
-          <p className="text-xs text-gray-500 text-center">
-            Elevate your content above average
-          </p>
-        </div>
       </aside>
     </>
   );
