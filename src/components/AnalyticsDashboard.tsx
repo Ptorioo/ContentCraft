@@ -192,9 +192,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
           return res.json();
         })
         .then(result => {
-          console.log('[AnalyticsDashboard] Random posts result:', result);
           const posts = result.posts || [];
-          console.log('[AnalyticsDashboard] Parsed posts:', posts.length);
           setScatterPosts(posts);
           setLoadingScatterPosts(false);
         })
@@ -327,9 +325,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
           return res.json();
         })
         .then(result => {
-          console.log('[AnalyticsDashboard] High ATI posts result:', result);
           const posts = result.posts || result.outliers || [];
-          console.log('[AnalyticsDashboard] Parsed posts:', posts.length);
           setTailOutliers(posts);
           setLoadingTailOutliers(false);
         })

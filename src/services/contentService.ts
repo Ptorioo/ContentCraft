@@ -55,9 +55,42 @@ export const analyzeContent = async (
     }
   }
 
-  // 從後端獲取 Novelty 和 Diversity（後端已計算並返回）
-  let novelty = data?.novelty ?? 0.5;
-  let diversity = data?.diversity ?? 0.5;
+  // 從後端獲取 Novelty 和 Diversity
+  // 後端返回格式：{ novelty: { text: ..., image: ... }, diversity: { text: ..., image: ... } }
+  // 計算綜合的 novelty 和 diversity（使用與 ATI 計算相同的權重）
+  let novelty = 0.5;
+  let diversity = 0.5;
+  
+  // 檢查是否有圖片：檢查 rel_img_paths 是否為非空字串
+  const hasImage = data?.rel_img_paths && data.rel_img_paths !== '' && data.rel_img_paths !== null;
+  
+  if (typeof data?.novelty === 'object' && data?.novelty?.text !== undefined) {
+    const textNov = data.novelty.text;
+    if (hasImage && data.novelty.image !== undefined) {
+      // 有圖片時：權重 [0.2, 0.8]（文字 20%，圖片 80%）
+      const imageNov = data.novelty.image;
+      novelty = 0.2 * textNov + 0.8 * imageNov;
+    } else {
+      // 無圖片時：只使用文字值（權重 [1.0, 0.0]）
+      novelty = textNov;
+    }
+  } else if (typeof data?.novelty === 'number') {
+    novelty = data.novelty;
+  }
+  
+  if (typeof data?.diversity === 'object' && data?.diversity?.text !== undefined) {
+    const textDiv = data.diversity.text;
+    if (hasImage && data.diversity.image !== undefined) {
+      // 有圖片時：權重 [0.2, 0.8]
+      const imageDiv = data.diversity.image;
+      diversity = 0.2 * textDiv + 0.8 * imageDiv;
+    } else {
+      // 無圖片時：只使用文字值
+      diversity = textDiv;
+    }
+  } else if (typeof data?.diversity === 'number') {
+    diversity = data.diversity;
+  }
   let textATI = 0;
   let imageATI = 0;
   

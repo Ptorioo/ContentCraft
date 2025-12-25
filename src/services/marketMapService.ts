@@ -3,23 +3,32 @@ import fs from 'fs';
 import path from 'path';
 
 const ROOT = process.cwd();
-const BRAND_AGG_CSV = path.resolve(ROOT, 'src/model/outputs/ati_test_brand_agg.csv');
-// 優先使用結果目錄的 CSV（完整數據），如果不存在則使用 model/outputs
-const RESULTS_DIR = path.resolve(ROOT, '結果');
-const PER_POST_CSV_RESULTS = path.resolve(RESULTS_DIR, 'ati_test_per_post.csv');
-const TRAIN_POST_CSV_RESULTS = path.resolve(RESULTS_DIR, 'ati_train_per_post.csv');
-const PER_POST_CSV_OPTIMIZED = path.resolve(ROOT, 'src/model/outputs/ati_test_per_post_optimized.csv');
+// 數據文件路徑（使用新的 data/ 目錄結構）
+const BRAND_AGG_CSV_PROCESSED = path.resolve(ROOT, 'data/processed/ati_test_brand_agg.csv');
+const BRAND_AGG_CSV_MODEL = path.resolve(ROOT, 'data/processed/ati_test_brand_agg_model.csv');
+const BRAND_AGG_CSV = fs.existsSync(BRAND_AGG_CSV_PROCESSED)
+  ? BRAND_AGG_CSV_PROCESSED
+  : BRAND_AGG_CSV_MODEL;
+
+// 測試數據（優先使用 results 版本，其次 original，最後 model 版本）
+const PER_POST_CSV_RESULTS = path.resolve(ROOT, 'data/test/ati_test_per_post_results.csv');
+const PER_POST_CSV_ORIGINAL = path.resolve(ROOT, 'data/test/ati_test_per_post.csv');
+const PER_POST_CSV_MODEL = path.resolve(ROOT, 'data/test/ati_test_per_post_model.csv');
 const PER_POST_CSV = fs.existsSync(PER_POST_CSV_RESULTS)
   ? PER_POST_CSV_RESULTS
-  : (fs.existsSync(PER_POST_CSV_OPTIMIZED) 
-      ? PER_POST_CSV_OPTIMIZED 
-      : path.resolve(ROOT, 'src/model/outputs/ati_test_per_post.csv'));
-const TRAIN_POST_CSV_OPTIMIZED = path.resolve(ROOT, 'src/model/outputs/ati_train_per_post_optimized.csv');
+  : fs.existsSync(PER_POST_CSV_ORIGINAL)
+  ? PER_POST_CSV_ORIGINAL
+  : PER_POST_CSV_MODEL;
+
+// 訓練數據（優先使用 results 版本，其次 original，最後 model 版本）
+const TRAIN_POST_CSV_RESULTS = path.resolve(ROOT, 'data/train/ati_train_per_post_results.csv');
+const TRAIN_POST_CSV_ORIGINAL = path.resolve(ROOT, 'data/train/ati_train_per_post.csv');
+const TRAIN_POST_CSV_MODEL = path.resolve(ROOT, 'data/train/ati_train_per_post_model.csv');
 const TRAIN_POST_CSV = fs.existsSync(TRAIN_POST_CSV_RESULTS)
   ? TRAIN_POST_CSV_RESULTS
-  : (fs.existsSync(TRAIN_POST_CSV_OPTIMIZED)
-      ? TRAIN_POST_CSV_OPTIMIZED
-      : path.resolve(ROOT, 'src/model/outputs/ati_train_per_post.csv'));
+  : fs.existsSync(TRAIN_POST_CSV_ORIGINAL)
+  ? TRAIN_POST_CSV_ORIGINAL
+  : TRAIN_POST_CSV_MODEL;
 // Embedding-based 品牌定位圖資料
 const EMBEDDING_BASED_MAP_JSON = path.resolve(ROOT, 'src/data/generated/embedding_based_map.json');
 const ATI_AWARE_MAP_JSON = path.resolve(ROOT, 'src/data/generated/ati_aware_map.json');

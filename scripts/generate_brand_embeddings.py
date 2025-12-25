@@ -14,9 +14,9 @@ from pathlib import Path
 
 # 設定路徑
 ROOT = Path(__file__).parent.parent
-EMBEDDING_FILE = ROOT / '結果' / 'modal_embeddings_v2.npz'
-TEST_CSV = ROOT / '結果' / 'ati_test_per_post.csv'
-TRAIN_CSV = ROOT / '結果' / 'ati_train_per_post.csv'
+EMBEDDING_FILE = ROOT / 'src' / 'model' / 'outputs' / 'modal_embeddings_v2.npz'
+TEST_CSV = ROOT / 'data' / 'test' / 'ati_test_per_post_results.csv'
+TRAIN_CSV = ROOT / 'data' / 'train' / 'ati_train_per_post_results.csv'
 OUTPUT_FILE = ROOT / 'src' / 'data' / 'generated' / 'brand_embeddings.json'
 
 # 確保輸出目錄存在

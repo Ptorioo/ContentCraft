@@ -1,5 +1,4 @@
 import { useState, useEffect as ReactUseEffect, useRef } from 'react';
-import React from 'react';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
@@ -15,18 +14,24 @@ function App() {
   const [activeView, setActiveView] = useState<'chat' | 'analytics'>('chat');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [resultPanelCollapsed, setResultPanelCollapsed] = useState(true); // 默認收合，因為初始沒有結果
-  const [sidebarWidth, setSidebarWidth] = useState(320);
-  // 計算頁面寬度的 1/3 作為右側面板的預設寬度
+  const [sidebarWidth, setSidebarWidth] = useState(250);
+  // 計算右側面板的預設寬度：(總寬 - 左側欄250) / 2
   const [resultPanelWidth, setResultPanelWidth] = useState(() => {
     if (typeof window !== 'undefined') {
-      return Math.floor(window.innerWidth / 3);
+      return Math.floor((window.innerWidth - 250) / 2);
     }
     return 640; // 伺服器端渲染時的預設值
   });
   const hasAutoExpandedRef = useRef(false); // 追蹤是否已經自動展開過
   const userManuallyCollapsedRef = useRef(false); // 追蹤用戶是否手動收合過
-  // 保存每個對話的 UI 狀態（如 A/B 測試面板是否顯示）
-  const [conversationUIState, setConversationUIState] = useState<Record<string, { showABTest?: boolean }>>({});
+  // 保存每個對話的 UI 狀態（如 A/B 測試面板是否顯示、A/B 測試數據）
+  const [conversationUIState, setConversationUIState] = useState<Record<string, { 
+    showABTest?: boolean;
+    abTestData?: {
+      modifiedText?: string;
+      modifiedAnalysis?: any; // PostAnalysisData
+    };
+  }>>({});
   const {
     conversations,
     currentConversation,
@@ -34,6 +39,7 @@ function App() {
     createNewConversation,
     setCurrentConversationId,
     addMessage,
+    deleteConversation,
     isLoading,
   } = useConversations();
 
@@ -79,6 +85,22 @@ function App() {
     }
   };
 
+  // 處理 A/B 測試數據的更新
+  const handleABTestDataChange = (data: { modifiedText?: string; modifiedAnalysis?: any }) => {
+    if (currentConversationId) {
+      setConversationUIState(prev => ({
+        ...prev,
+        [currentConversationId]: {
+          ...prev[currentConversationId],
+          abTestData: {
+            ...prev[currentConversationId]?.abTestData,
+            ...data,
+          },
+        },
+      }));
+    }
+  };
+
   // 當切換對話時，重置自動展開標記，以便新對話的分析結果可以顯示
   ReactUseEffect(() => {
     hasAutoExpandedRef.current = false;
@@ -117,6 +139,7 @@ function App() {
             conversations={conversations}
             currentConversationId={currentConversationId}
             onSelectConversation={handleSelectConversation}
+            onDeleteConversation={deleteConversation}
             onNewConversation={handleNewConversation}
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
@@ -172,6 +195,8 @@ function App() {
                   originalImage={originalImage}
                   showABTest={currentUIState.showABTest}
                   onShowABTestChange={handleShowABTestChange}
+                  abTestData={currentUIState.abTestData}
+                  onABTestDataChange={handleABTestDataChange}
                 />
               </div>
             ) : (

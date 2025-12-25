@@ -7,13 +7,12 @@
   "TAU": 0.07,
   "IMG_MAX_IMAGES": 1,
   "OCR_MAX_IMAGES": 1,
-  "text_max_length": 128,
   "phase1": {
     "text": {
       "wN": 0.5,
       "wD": 0.5,
-      "nov_min": 0.0854421854019165,
-      "nov_max": 0.3763124942779541
+      "nov_min": 0.0,
+      "nov_max": 1.0
     },
     "image": {
       "wN": 1.0,

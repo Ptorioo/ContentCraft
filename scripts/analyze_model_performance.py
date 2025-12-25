@@ -8,10 +8,10 @@ from scipy.stats import spearmanr, pearsonr
 import os
 
 # 讀取資料
-base_dir = os.path.join(os.path.dirname(__file__), '..', '結果')
-test_df = pd.read_csv(os.path.join(base_dir, 'ati_test_per_post.csv'))
-train_df = pd.read_csv(os.path.join(base_dir, 'ati_train_per_post.csv'))
-brand_df = pd.read_csv(os.path.join(base_dir, 'ati_test_brand_agg.csv'))
+base_dir = os.path.join(os.path.dirname(__file__), '..')
+test_df = pd.read_csv(os.path.join(base_dir, 'data', 'test', 'ati_test_per_post_results.csv'))
+train_df = pd.read_csv(os.path.join(base_dir, 'data', 'train', 'ati_train_per_post_results.csv'))
+brand_df = pd.read_csv(os.path.join(base_dir, 'data', 'processed', 'ati_test_brand_agg.csv'))
 
 print('=' * 70)
 print('📊 ATI 模型效果評估報告')

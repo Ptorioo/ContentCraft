@@ -126,7 +126,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, disabled = f
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = '48px';
                 if (target.scrollHeight > 48) {
-                  target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+                target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
                 }
               }}
             />

@@ -33,6 +33,20 @@ def load_artifacts():
     }
     with open(ART_DIR / "config.json", "r", encoding="utf-8") as f:
         cfg = json.load(f)
+    # 如果 config 中有 text_max_length，使用它；否則使用默認值 128（支持更長的貼文）
+    # 注意：centers 是基於訓練時的 max_length（通常是64）計算的，但 CLIP 對長度變化相對穩定
+    if "text_max_length" not in cfg:
+        # 嘗試從 artifacts_light.json 讀取（如果存在）
+        light_json_path = ART_DIR / "artifacts_light.json"
+        if light_json_path.exists():
+            try:
+                with open(light_json_path, "r", encoding="utf-8") as f:
+                    light_cfg = json.load(f)
+                    cfg["text_max_length"] = light_cfg.get("backend", {}).get("text_max_length", 128)
+            except:
+                cfg["text_max_length"] = 128
+        else:
+            cfg["text_max_length"] = 128  # 默認使用 128 以支持更長的貼文
     return centers, cfg
 
 def _norm_rows(x): n = np.linalg.norm(x, axis=1, keepdims=True) + 1e-9; return (x / n).astype(np.float32)
@@ -41,6 +55,12 @@ def _softmax_rows(x, tau):
     e = np.exp(z); return e / (e.sum(axis=1, keepdims=True) + 1e-9)
 
 def compute_DS_for_modality(X, centers, wN, wD, nov_min, nov_max, tau):
+    """
+    Return per-sample:
+      nov: normalized novelty in [0,1]
+      div: normalized diversity (entropy-based) in [0,1]
+      DS : Distinctiveness Score = wN * nov + wD * div
+    """
     Xn = _norm_rows(X); sims = Xn @ centers.T
     max_sim = sims.max(axis=1)
     nov_raw = 1.0 - max_sim
@@ -51,8 +71,9 @@ def compute_DS_for_modality(X, centers, wN, wD, nov_min, nov_max, tau):
         nov = np.clip(nov, 0.0, 1.0)
     probs = _softmax_rows(sims, tau=tau)
     ent = -(probs * (np.log(probs + 1e-9))).sum(axis=1) / (math.log(sims.shape[1]) + 1e-9)
-    DS = (wN * nov + wD * ent).astype(np.float32)
-    return DS
+    div = ent.astype(np.float32)  # diversity = normalized entropy
+    DS = (wN * nov + wD * div).astype(np.float32)
+    return nov.astype(np.float32), div, DS
 
 def parse_rel_img_paths(cell):
     if pd.isna(cell): return []
@@ -164,14 +185,45 @@ def embed_text_clip(texts, batch_size=64, max_length=64, device_override=None, u
         ctx = torch.amp.autocast('cuda', dtype=torch.float16) if (dev == "cuda" and use_fp16) else _nullctx()
         with ctx:
             try:
+                # 嘗試使用 get_text_features（標準 CLIP）
                 feats = clip_model.get_text_features(**inputs)
-            except TypeError:
-                out = []
-                for j in range(inputs["input_ids"].shape[0]):
-                    sub = {k: v[j:j+1] for k, v in inputs.items()}
-                    try: out.append(clip_model.get_text_features(**sub))
-                    except Exception: out.append(torch.zeros((1, PROJ_DIM), device=dev))
-                feats = torch.cat(out, dim=0)
+                # 檢查是否為 None 或零向量（ChineseCLIP 可能返回 None）
+                if feats is None or (feats.numel() > 0 and torch.allclose(feats, torch.zeros_like(feats))):
+                    raise ValueError("get_text_features returned None or zeros")
+            except (TypeError, ValueError, AttributeError):
+                # ChineseCLIP 需要手動使用 text_model + text_projection
+                try:
+                    text_outputs = clip_model.text_model(**inputs)
+                    # 獲取 pooled output（使用 [CLS] token）
+                    if isinstance(text_outputs, tuple):
+                        last_hidden_state = text_outputs[0]
+                    elif hasattr(text_outputs, 'last_hidden_state'):
+                        last_hidden_state = text_outputs.last_hidden_state
+                    else:
+                        last_hidden_state = text_outputs
+                    # 使用第一個 token ([CLS]) 作為 pooled output
+                    pooled_output = last_hidden_state[:, 0, :]
+                    # 應用 projection
+                    feats = clip_model.text_projection(pooled_output)
+                except Exception as e:
+                    # 如果還是失敗，逐個處理
+                    out = []
+                    for j in range(inputs["input_ids"].shape[0]):
+                        sub = {k: v[j:j+1] for k, v in inputs.items()}
+                        try:
+                            text_outputs = clip_model.text_model(**sub)
+                            if isinstance(text_outputs, tuple):
+                                last_hidden_state = text_outputs[0]
+                            elif hasattr(text_outputs, 'last_hidden_state'):
+                                last_hidden_state = text_outputs.last_hidden_state
+                            else:
+                                last_hidden_state = text_outputs
+                            pooled_output = last_hidden_state[:, 0, :]
+                            feat = clip_model.text_projection(pooled_output)
+                            out.append(feat)
+                        except Exception:
+                            out.append(torch.zeros((1, PROJ_DIM), device=dev))
+                    feats = torch.cat(out, dim=0) if out else torch.zeros((len(chunk), PROJ_DIM), device=dev)
         arr = feats.detach().cpu().numpy()
         arr = arr / (np.linalg.norm(arr, axis=1, keepdims=True) + 1e-9)
         feats_all.append(arr.astype(np.float32))
@@ -180,13 +232,22 @@ def embed_text_clip(texts, batch_size=64, max_length=64, device_override=None, u
     return np.vstack(feats_all) if feats_all else np.zeros((0, PROJ_DIM), dtype=np.float32)
 
 @torch.no_grad()
-def embed_text_clip_safe(texts):
+def embed_text_clip_safe(texts, max_length=None):
+    """Safe wrapper for embed_text_clip with automatic max_length detection."""
+    if max_length is None:
+        # 嘗試從 config 讀取，如果不存在則使用默認值
+        try:
+            _, cfg = load_artifacts()
+            max_length = cfg.get("text_max_length", 128)  # 默認使用128以支持更長的貼文
+        except:
+            max_length = 128  # 如果無法讀取config，使用128作為默認值
+    
     for bs in [128,64,32,16,8,4,2,1]:
-        try: return embed_text_clip(texts, batch_size=bs, max_length=64, device_override=None, use_fp16=True)
+        try: return embed_text_clip(texts, batch_size=bs, max_length=max_length, device_override=None, use_fp16=True)
         except RuntimeError as e:
             if 'CUDA out of memory' in str(e): torch.cuda.empty_cache(); continue
             raise
-    return embed_text_clip(texts, batch_size=64, max_length=64, device_override='cpu', use_fp16=False)
+    return embed_text_clip(texts, batch_size=64, max_length=max_length, device_override='cpu', use_fp16=False)
 
 @torch.no_grad()
 def embed_images_clip(pil_images):
@@ -199,9 +260,6 @@ def embed_images_clip(pil_images):
 def compute_ati_for_df(df: pd.DataFrame) -> pd.DataFrame:
     centers, cfg = load_artifacts()
     TAU = cfg["TAU"]
-    # 只使用文字和圖片兩個模態，不使用 metadata
-    # phase2_v 現在只有 [text_weight, image_weight]
-    v = np.array(cfg["phase2_v"][:2], dtype=np.float32) if len(cfg["phase2_v"]) >= 2 else np.array([0.0, 1.0], dtype=np.float32)
 
     rel_lists = df["rel_img_paths"].apply(parse_rel_img_paths).tolist()
     ocr_texts = []
@@ -214,6 +272,7 @@ def compute_ati_for_df(df: pd.DataFrame) -> pd.DataFrame:
     text_vec = np.hstack([cap_emb, ocr_emb]).astype(np.float32)
 
     img_vecs = []
+    has_images = []
     for rels in rel_lists:
         vecs = []
         for rp in rels[:cfg["IMG_MAX_IMAGES"]]:
@@ -227,22 +286,54 @@ def compute_ati_for_df(df: pd.DataFrame) -> pd.DataFrame:
             vimg = embed_images_clip([im])[0]; vecs.append(vimg)
         if len(vecs) == 0:
             vec_mean = np.zeros((cfg["PROJ_DIM"],), dtype=np.float32)
+            has_images.append(False)
         else:
             arr = np.vstack(vecs); vec_mean = arr.mean(axis=0)
             vec_mean = vec_mean / (np.linalg.norm(vec_mean) + 1e-9)
+            has_images.append(True)
         img_vecs.append(vec_mean.astype(np.float32))
     image_vec = np.vstack(img_vecs)
 
-    DS_text = compute_DS_for_modality(text_vec,  centers["text"],  cfg["phase1"]["text"]["wN"],  cfg["phase1"]["text"]["wD"],  cfg["phase1"]["text"]["nov_min"],  cfg["phase1"]["text"]["nov_max"],  TAU)
-    DS_image = compute_DS_for_modality(image_vec, centers["image"], cfg["phase1"]["image"]["wN"], cfg["phase1"]["image"]["wD"], cfg["phase1"]["image"]["nov_min"], cfg["phase1"]["image"]["nov_max"], TAU)
+    nov_text,  div_text,  DS_text  = compute_DS_for_modality(text_vec,  centers["text"],  cfg["phase1"]["text"]["wN"],  cfg["phase1"]["text"]["wD"],  cfg["phase1"]["text"]["nov_min"],  cfg["phase1"]["text"]["nov_max"],  TAU)
+    nov_image, div_image, DS_image = compute_DS_for_modality(image_vec, centers["image"], cfg["phase1"]["image"]["wN"], cfg["phase1"]["image"]["wD"], cfg["phase1"]["image"]["nov_min"], cfg["phase1"]["image"]["nov_max"], TAU)
 
-    DS_final = (v[0]*DS_text + v[1]*DS_image).astype(np.float32)
-    ATI = 100.0*(1.0 - DS_final)
+    # 根據是否有圖片動態調整權重
+    # 如果有圖片：圖片8文字2 (v = [0.2, 0.8])
+    # 如果沒有圖片：文字1圖片0 (v = [1.0, 0.0])
+    DS_final_list = []
+    for i, has_img in enumerate(has_images):
+        if has_img:
+            v = np.array([0.2, 0.8], dtype=np.float32)  # 文字2圖片8
+        else:
+            v = np.array([1.0, 0.0], dtype=np.float32)  # 文字1圖片0
+        ds_final = (v[0]*DS_text[i] + v[1]*DS_image[i]).astype(np.float32)
+        DS_final_list.append(ds_final)
+    DS_final = np.array(DS_final_list, dtype=np.float32)
+    # 計算 ATI，純文字時乘以 1.1 以提高 ATI 分數
+    ATI_list = []
+    for i, has_img in enumerate(has_images):
+        ati_base = 100.0 * (1.0 - DS_final[i])
+        if not has_img:
+            # 純文字時，將 ATI 乘以 1.1
+            ati = ati_base * 1.1
+        else:
+            # 圖文都有時，使用原始 ATI
+            ati = ati_base
+        ATI_list.append(ati)
+    ATI = np.array(ATI_list, dtype=np.float32)
 
     out = df[["brand","sum","rel_img_paths","ftime_parsed"]].copy()
-    out["DS_text"]=DS_text; out["DS_image"]=DS_image
-    out["DS_final"]=DS_final; out["ATI_final"]=ATI
-    out["ocr_text"]=ocr_texts
+    # per-modality novelty & diversity
+    out["text_nov"]  = nov_text
+    out["text_div"]  = div_text
+    out["image_nov"] = nov_image
+    out["image_div"] = div_image
+    # DS & ATI
+    out["DS_text"]   = DS_text
+    out["DS_image"]  = DS_image
+    out["DS_final"]  = DS_final
+    out["ATI_final"] = ATI
+    out["ocr_text"]  = ocr_texts
     return out
 
 def compute_ati_single(text: str, rel_img_paths: str | None = None) -> dict:
@@ -262,6 +353,14 @@ def compute_ati_single(text: str, rel_img_paths: str | None = None) -> dict:
             "DS_text":  float(row["DS_text"]),
             "DS_image": float(row["DS_image"]),
             "DS_final": float(row["DS_final"]),
+        },
+        "novelty": {
+            "text":  float(row["text_nov"]),
+            "image": float(row["image_nov"]),
+        },
+        "diversity": {
+            "text":  float(row["text_div"]),
+            "image": float(row["image_div"]),
         },
         "ocr_text": row["ocr_text"],
         "rel_img_paths": rel_img_paths or "",

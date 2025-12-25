@@ -6,9 +6,12 @@ import { analyzeContent, AnalyzeResult } from '../services/contentService';
 export const useConversations = () => {
   const [conversations, setConversations] = useState<Conversation[]>(sampleConversations);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>('1');
-  const [isLoading, setIsLoading] = useState(false);
+  // 改為按對話 ID 追蹤 loading 狀態
+  const [loadingConversationIds, setLoadingConversationIds] = useState<Set<string>>(new Set());
 
   const currentConversation = conversations.find(c => c.id === currentConversationId);
+  // 只顯示當前對話的 loading 狀態
+  const isLoading = currentConversationId ? loadingConversationIds.has(currentConversationId) : false;
 
   const createNewConversation = () => {
     const newConversation: Conversation = {
@@ -55,7 +58,8 @@ export const useConversations = () => {
     }));
 
     if (isUser) {
-      setIsLoading(true);
+      // 標記該對話為 loading 狀態
+      setLoadingConversationIds(prev => new Set(prev).add(convId));
       try {
         const aiResult: AnalyzeResult = await analyzeContent(content, file);
         const aiMsg: Message = {
@@ -95,9 +99,35 @@ export const useConversations = () => {
           return conv;
         }));
       } finally {
-        setIsLoading(false);
+        // 移除該對話的 loading 狀態
+        setLoadingConversationIds(prev => {
+          const next = new Set(prev);
+          next.delete(convId);
+          return next;
+        });
       }
     }
+  };
+
+  const deleteConversation = (id: string) => {
+    setConversations(prev => {
+      const remainingConversations = prev.filter(conv => conv.id !== id);
+      // 如果刪除的是當前對話，切換到第一個對話（如果還有對話的話）
+      if (currentConversationId === id) {
+        if (remainingConversations.length > 0) {
+          setCurrentConversationId(remainingConversations[0].id);
+        } else {
+          setCurrentConversationId(null);
+        }
+      }
+      return remainingConversations;
+    });
+    // 清除該對話的 loading 狀態
+    setLoadingConversationIds(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   };
 
   return {
@@ -107,6 +137,7 @@ export const useConversations = () => {
     createNewConversation,
     setCurrentConversationId,
     addMessage,
+    deleteConversation,
     isLoading
   };
 };

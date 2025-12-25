@@ -8,6 +8,9 @@ interface ABTestPanelProps {
   originalImage?: File;
   originalAnalysis: PostAnalysisData;
   onApplyChanges?: (modifiedText: string, modifiedAnalysis: PostAnalysisData) => void;
+  initialModifiedText?: string;
+  initialModifiedAnalysis?: PostAnalysisData;
+  onDataChange?: (data: { modifiedText?: string; modifiedAnalysis?: PostAnalysisData }) => void;
 }
 
 const ABTestPanel: React.FC<ABTestPanelProps> = ({
@@ -15,20 +18,35 @@ const ABTestPanel: React.FC<ABTestPanelProps> = ({
   originalImage,
   originalAnalysis,
   onApplyChanges,
+  initialModifiedText,
+  initialModifiedAnalysis,
+  onDataChange,
 }) => {
-  const [modifiedText, setModifiedText] = useState(originalText);
-  const [modifiedAnalysis, setModifiedAnalysis] = useState<PostAnalysisData | null>(null);
+  const [modifiedText, setModifiedText] = useState(initialModifiedText || originalText);
+  const [modifiedAnalysis, setModifiedAnalysis] = useState<PostAnalysisData | null>(initialModifiedAnalysis || null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [applied, setApplied] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // 當 originalText 改變時，重置 modifiedText
+  // 當 originalText 改變時，重置 modifiedText（但只有在沒有初始值的情況下）
   useEffect(() => {
-    setModifiedText(originalText);
-    setModifiedAnalysis(null);
-    setError(null);
-  }, [originalText]);
+    if (!initialModifiedText) {
+      setModifiedText(originalText);
+      setModifiedAnalysis(null);
+      setError(null);
+    }
+  }, [originalText, initialModifiedText]);
+
+  // 當外部傳入的初始值改變時，更新內部狀態
+  useEffect(() => {
+    if (initialModifiedText !== undefined) {
+      setModifiedText(initialModifiedText);
+    }
+    if (initialModifiedAnalysis !== undefined) {
+      setModifiedAnalysis(initialModifiedAnalysis);
+    }
+  }, [initialModifiedText, initialModifiedAnalysis]);
 
   // 自動調整 textarea 高度
   useEffect(() => {
@@ -51,6 +69,11 @@ const ABTestPanel: React.FC<ABTestPanelProps> = ({
       const result = await analyzeContent(modifiedText, originalImage);
       if (result.analysisData) {
         setModifiedAnalysis(result.analysisData);
+        // 通知外部組件數據已更新
+        onDataChange?.({
+          modifiedText,
+          modifiedAnalysis: result.analysisData,
+        });
       } else {
         setError('計算失敗，請重試');
       }
@@ -110,7 +133,15 @@ const ABTestPanel: React.FC<ABTestPanelProps> = ({
             <textarea
               ref={textareaRef}
               value={modifiedText}
-              onChange={(e) => setModifiedText(e.target.value)}
+              onChange={(e) => {
+                const newText = e.target.value;
+                setModifiedText(newText);
+                // 通知外部組件文字已更新
+                onDataChange?.({
+                  modifiedText: newText,
+                  modifiedAnalysis: modifiedAnalysis || undefined,
+                });
+              }}
               placeholder="輸入修改後的文字內容..."
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none overflow-hidden"
               rows={1}

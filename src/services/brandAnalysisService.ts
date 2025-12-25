@@ -3,32 +3,36 @@ import fs from 'fs';
 import path from 'path';
 
 const ROOT = process.cwd();
-// 品牌彙總資料也優先使用結果目錄
-const BRAND_AGG_CSV_RESULT = path.resolve(ROOT, '結果/ati_test_brand_agg.csv');
-const BRAND_AGG_CSV_OUTPUTS = path.resolve(ROOT, 'src/model/outputs/ati_test_brand_agg.csv');
-const BRAND_AGG_CSV = fs.existsSync(BRAND_AGG_CSV_RESULT)
-  ? BRAND_AGG_CSV_RESULT
-  : BRAND_AGG_CSV_OUTPUTS;
-// 優先使用結果目錄中的完整資料，如果不存在則使用 src/model/outputs 中的資料
-const PER_POST_CSV_RESULT = path.resolve(ROOT, '結果/ati_test_per_post.csv');
-const PER_POST_CSV_OPTIMIZED = path.resolve(ROOT, 'src/model/outputs/ati_test_per_post_optimized.csv');
-const PER_POST_CSV_OUTPUTS = path.resolve(ROOT, 'src/model/outputs/ati_test_per_post.csv');
-const PER_POST_CSV = fs.existsSync(PER_POST_CSV_RESULT)
-  ? PER_POST_CSV_RESULT
-  : fs.existsSync(PER_POST_CSV_OPTIMIZED)
-  ? PER_POST_CSV_OPTIMIZED
-  : PER_POST_CSV_OUTPUTS;
+// 數據文件路徑（使用新的 data/ 目錄結構）
+const BRAND_AGG_CSV_PROCESSED = path.resolve(ROOT, 'data/processed/ati_test_brand_agg.csv');
+const BRAND_AGG_CSV_MODEL = path.resolve(ROOT, 'data/processed/ati_test_brand_agg_model.csv');
+const BRAND_AGG_CSV = fs.existsSync(BRAND_AGG_CSV_PROCESSED)
+  ? BRAND_AGG_CSV_PROCESSED
+  : BRAND_AGG_CSV_MODEL;
 
-const TRAIN_POST_CSV_RESULT = path.resolve(ROOT, '結果/ati_train_per_post.csv');
-const TRAIN_POST_CSV_OPTIMIZED = path.resolve(ROOT, 'src/model/outputs/ati_train_per_post_optimized.csv');
-const TRAIN_POST_CSV_OUTPUTS = path.resolve(ROOT, 'src/model/outputs/ati_train_per_post.csv');
-const TRAIN_POST_CSV = fs.existsSync(TRAIN_POST_CSV_RESULT)
-  ? TRAIN_POST_CSV_RESULT
-  : fs.existsSync(TRAIN_POST_CSV_OPTIMIZED)
-  ? TRAIN_POST_CSV_OPTIMIZED
-  : TRAIN_POST_CSV_OUTPUTS;
-const RAW_TEST_POSTS_CSV = path.resolve(ROOT, 'src/model/with_rel_paths_test_posts.csv');
-const RAW_TRAIN_POSTS_CSV = path.resolve(ROOT, 'src/model/with_rel_paths_train_posts.csv');
+// 測試數據（優先使用 results 版本，其次 model 版本）
+const PER_POST_CSV_RESULTS = path.resolve(ROOT, 'data/test/ati_test_per_post_results.csv');
+const PER_POST_CSV_ORIGINAL = path.resolve(ROOT, 'data/test/ati_test_per_post.csv');
+const PER_POST_CSV_MODEL = path.resolve(ROOT, 'data/test/ati_test_per_post_model.csv');
+const PER_POST_CSV = fs.existsSync(PER_POST_CSV_RESULTS)
+  ? PER_POST_CSV_RESULTS
+  : fs.existsSync(PER_POST_CSV_ORIGINAL)
+  ? PER_POST_CSV_ORIGINAL
+  : PER_POST_CSV_MODEL;
+
+// 訓練數據（優先使用 results 版本，其次 model 版本）
+const TRAIN_POST_CSV_RESULTS = path.resolve(ROOT, 'data/train/ati_train_per_post_results.csv');
+const TRAIN_POST_CSV_ORIGINAL = path.resolve(ROOT, 'data/train/ati_train_per_post.csv');
+const TRAIN_POST_CSV_MODEL = path.resolve(ROOT, 'data/train/ati_train_per_post_model.csv');
+const TRAIN_POST_CSV = fs.existsSync(TRAIN_POST_CSV_RESULTS)
+  ? TRAIN_POST_CSV_RESULTS
+  : fs.existsSync(TRAIN_POST_CSV_ORIGINAL)
+  ? TRAIN_POST_CSV_ORIGINAL
+  : TRAIN_POST_CSV_MODEL;
+
+// 原始數據
+const RAW_TEST_POSTS_CSV = path.resolve(ROOT, 'data/test/with_rel_paths_test_posts.csv');
+const RAW_TRAIN_POSTS_CSV = path.resolve(ROOT, 'data/train/with_rel_paths_train_posts.csv');
 
 interface BrandAggData {
   brand: string;

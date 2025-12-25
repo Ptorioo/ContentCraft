@@ -1,0 +1,42 @@
+{
+  "model_version": "ati-v0.1",
+  "anchor_version": "k6_tau0.07",
+  "backend": {
+    "clip_backend": "chinese-clip",
+    "model_id": "OFA-Sys/chinese-clip-vit-base-patch16",
+    "text_max_length": 64,
+    "ocr_langs": [
+      "ch_tra",
+      "en"
+    ]
+  },
+  "scoring": {
+    "K": 6,
+    "tau": 0.07
+  },
+  "weights_modality": {
+    "text": {
+      "wN": 0.5,
+      "wD": 0.5
+    },
+    "image": {
+      "wN": 0.3501806855201721,
+      "wD": 0.6498191952705383
+    }
+  },
+  "weights_fusion": {
+    "v_text": 0.0,
+    "v_image": 1.0
+  },
+  "novelty_minmax": {
+    "text": {
+      "min": 0.0854421854019165,
+      "max": 0.3763124942779541
+    },
+    "image": {
+      "min": 0.07619166374206543,
+      "max": 0.4641953110694885
+    }
+  },
+  "meta_enabled": false
+}

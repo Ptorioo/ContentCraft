@@ -9,10 +9,9 @@ from statistics import fmean
 from typing import Dict, List, Tuple
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-RESULTS_DIR = ROOT_DIR / "結果"
-PER_POST_PATH_TEST = RESULTS_DIR / "ati_test_per_post.csv"
-PER_POST_PATH_TRAIN = RESULTS_DIR / "ati_train_per_post.csv"
-BRAND_AGG_PATH = RESULTS_DIR / "ati_test_brand_agg.csv"
+PER_POST_PATH_TEST = ROOT_DIR / "data" / "test" / "ati_test_per_post_results.csv"
+PER_POST_PATH_TRAIN = ROOT_DIR / "data" / "train" / "ati_train_per_post_results.csv"
+BRAND_AGG_PATH = ROOT_DIR / "data" / "processed" / "ati_test_brand_agg.csv"
 OUTPUT_DIR = ROOT_DIR / "src" / "data" / "generated"
 SUMMARY_PATH = OUTPUT_DIR / "summary.json"
 SCATTER_PATH = OUTPUT_DIR / "novelty_diversity_scatter.json"

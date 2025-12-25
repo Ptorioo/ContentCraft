@@ -1,11 +1,13 @@
-import React from 'react';
-import { Plus, MessageSquare, FileText, User, Briefcase, X, PanelLeftClose } from 'lucide-react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Plus, MessageSquare, FileText, User, Briefcase, X, PanelLeftClose, Trash2 } from 'lucide-react';
 import { Conversation } from '../types';
 
 interface SidebarProps {
   conversations: Conversation[];
   currentConversationId: string | null;
   onSelectConversation: (id: string) => void;
+  onDeleteConversation: (id: string) => void;
   onNewConversation: () => void;
   isOpen: boolean;
   onClose: () => void;
@@ -17,12 +19,30 @@ const Sidebar: React.FC<SidebarProps> = ({
   conversations,
   currentConversationId,
   onSelectConversation,
+  onDeleteConversation,
   onNewConversation,
   isOpen,
   onClose,
   onToggleCollapse,
   showCollapseButton = false
 }) => {
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const handleDeleteClick = (e: React.MouseEvent, conversationId: string) => {
+    e.stopPropagation(); // 防止觸發對話選擇
+    setDeleteConfirmId(conversationId);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmId) {
+      onDeleteConversation(deleteConfirmId);
+      setDeleteConfirmId(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmId(null);
+  };
   const samplePrompts = [
     {
       icon: <FileText size={16} />,
@@ -115,27 +135,83 @@ const Sidebar: React.FC<SidebarProps> = ({
           <h3 className="text-sm font-semibold text-gray-900 mb-3">Recent</h3>
           <div className="space-y-1">
             {conversations.map((conversation) => (
-              <button
+              <div
                 key={conversation.id}
-                onClick={() => onSelectConversation(conversation.id)}
                 className={`
-                  w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-3
+                  group relative w-full rounded-lg transition-colors flex items-center overflow-hidden
                   ${currentConversationId === conversation.id 
-                    ? 'bg-purple-100 text-purple-900 border border-purple-200' 
-                    : 'hover:bg-gray-100 text-gray-700'
+                    ? 'bg-purple-100 border border-purple-200' 
+                    : 'hover:bg-gray-100'
                   }
                 `}
               >
-                <MessageSquare size={16} />
-                <span className="text-sm font-medium truncate">
-                  {conversation.title}
-                </span>
-              </button>
+                <button
+                  onClick={() => onSelectConversation(conversation.id)}
+                  className={`
+                    flex-1 text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-3 min-w-0
+                    ${currentConversationId === conversation.id 
+                      ? 'text-purple-900' 
+                      : 'text-gray-700'
+                    }
+                  `}
+                >
+                  <MessageSquare size={16} className="flex-shrink-0" />
+                  <span className="text-sm font-medium truncate min-w-0">
+                    {conversation.title}
+                  </span>
+                </button>
+                <button
+                  onClick={(e) => handleDeleteClick(e, conversation.id)}
+                  className={`
+                    p-2 rounded-lg transition-colors flex-shrink-0 mr-1
+                    ${currentConversationId === conversation.id
+                      ? 'text-purple-600 hover:bg-purple-200'
+                      : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                    }
+                  `}
+                  title="刪除對話"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             ))}
           </div>
         </div>
 
       </aside>
+
+      {/* 刪除確認對話框 - 使用 React Portal 渲染到 body，確保在最上層 */}
+      {deleteConfirmId && typeof window !== 'undefined' && createPortal(
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
+          onClick={handleCancelDelete}
+        >
+          <div 
+            className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">確認刪除</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              確定要刪除此對話嗎？此操作無法復原。
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCancelDelete}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                刪除
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 };
