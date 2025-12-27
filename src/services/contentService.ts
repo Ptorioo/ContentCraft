@@ -67,9 +67,9 @@ export const analyzeContent = async (
   if (typeof data?.novelty === 'object' && data?.novelty?.text !== undefined) {
     const textNov = data.novelty.text;
     if (hasImage && data.novelty.image !== undefined) {
-      // 有圖片時：權重 [0.2, 0.8]（文字 20%，圖片 80%）
+      // 有圖片時：權重 [0.5, 0.5]（文字 50%，圖片 50%）
       const imageNov = data.novelty.image;
-      novelty = 0.2 * textNov + 0.8 * imageNov;
+      novelty = 0.5 * textNov + 0.5 * imageNov;
     } else {
       // 無圖片時：只使用文字值（權重 [1.0, 0.0]）
       novelty = textNov;
@@ -81,9 +81,9 @@ export const analyzeContent = async (
   if (typeof data?.diversity === 'object' && data?.diversity?.text !== undefined) {
     const textDiv = data.diversity.text;
     if (hasImage && data.diversity.image !== undefined) {
-      // 有圖片時：權重 [0.2, 0.8]
+      // 有圖片時：權重 [0.5, 0.5]
       const imageDiv = data.diversity.image;
-      diversity = 0.2 * textDiv + 0.8 * imageDiv;
+      diversity = 0.5 * textDiv + 0.5 * imageDiv;
     } else {
       // 無圖片時：只使用文字值
       diversity = textDiv;

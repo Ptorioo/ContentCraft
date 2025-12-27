@@ -7,6 +7,7 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import PostAnalysisResult from './components/PostAnalysisResult';
 import { ResizablePanel } from './components/ResizablePanel';
 import { useConversations } from './hooks/useConversations';
+import { macuABTestData, manshangABTestData } from './data/sampleConversations';
 import { mockAnalytics } from './data/mockAnalytics';
 
 function App() {
@@ -31,7 +32,18 @@ function App() {
       modifiedText?: string;
       modifiedAnalysis?: any; // PostAnalysisData
     };
-  }>>({});
+  }>>({
+    // 為範例對話 '1' (麻古) 設置預設的 A/B test 數據，預設展開
+    '1': {
+      showABTest: true,
+      abTestData: macuABTestData,
+    },
+    // 為範例對話 '2' (滿上) 設置預設的 A/B test 數據，預設展開
+    '2': {
+      showABTest: true,
+      abTestData: manshangABTestData,
+    },
+  });
   const {
     conversations,
     currentConversation,

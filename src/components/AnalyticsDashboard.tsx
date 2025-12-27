@@ -121,9 +121,6 @@ const OutlierList: React.FC<{ posts: Array<TailOutlierPost & { displayIndex?: nu
 
 const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToChat }) => {
   const [activeTab, setActiveTab] = useState<'brand' | 'market' | 'overview'>('overview');
-  const [selectedCase, setSelectedCase] = useState(data?.caseStudies?.[0]?.brandId ?? '');
-  const activeCase = data?.caseStudies?.find((c) => c.brandId === selectedCase) ?? data?.caseStudies?.[0];
-  const [selectedScenarioIdx, setSelectedScenarioIdx] = useState(0);
   const [marketTrend, setMarketTrend] = useState<Array<{date: string; avgAti: number; avgNovelty: number; avgDiversity: number}>>([]);
   const [decilesData, setDecilesData] = useState<any[]>([]);
   const [loadingTrend, setLoadingTrend] = useState(false);
@@ -207,30 +204,6 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
     }
   }, [activeTab]);
 
-  // 計算動態軸範圍（根據實際數據範圍，加上 10% 邊距）
-  const axisRanges = useMemo(() => {
-    if (scatterData.length === 0) {
-      return { novelty: [0, 1], diversity: [0, 1] };
-    }
-    
-    const novelties = scatterData.map(d => d.novelty);
-    const diversities = scatterData.map(d => d.diversity);
-    
-    const novMin = Math.min(...novelties);
-    const novMax = Math.max(...novelties);
-    const novRange = novMax - novMin;
-    const novPadding = novRange * 0.1;
-    
-    const divMin = Math.min(...diversities);
-    const divMax = Math.max(...diversities);
-    const divRange = divMax - divMin;
-    const divPadding = divRange * 0.1;
-    
-    return {
-      novelty: [Math.max(0, novMin - novPadding), Math.min(1, novMax + novPadding)],
-      diversity: [Math.max(0, divMin - divPadding), Math.min(1, divMax + divPadding)],
-    };
-  }, [scatterData]);
 
   // 計算 ATI 的範圍（用於顏色映射）
   const atiRange = useMemo(() => {
@@ -649,19 +622,19 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
                           type="number"
                           dataKey="novelty"
                           name="Novelty"
-                          domain={axisRanges.novelty}
+                          domain={[0, 1]}
                           tickFormatter={(value: number) => value.toFixed(3)}
                           label={{ value: 'Novelty', position: 'bottom', offset: 10, style: { textAnchor: 'middle' } }}
-                          allowDataOverflow={false}
+                          allowDataOverflow={true}
                         />
                         <YAxis
                           type="number"
                           dataKey="diversity"
                           name="Diversity"
-                          domain={axisRanges.diversity}
+                          domain={[0, 1]}
                           tickFormatter={(value: number) => value.toFixed(3)}
                           label={{ value: 'Diversity', angle: -90, position: 'left', offset: 15, style: { textAnchor: 'middle' } }}
-                          allowDataOverflow={false}
+                          allowDataOverflow={true}
                         />
                         <ZAxis dataKey="ati" range={[10, 60]} />
                         <Tooltip 
@@ -736,190 +709,6 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, onBackToC
             </div>
           </div>
         </section>
-
-        {activeCase && (
-          <section className="bg-white border border-gray-200 rounded-xl shadow-sm">
-            <div className="p-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">案例分析</h3>
-                <p className="text-sm text-gray-500">
-                  比較平均陷阱風險最高／最低品牌的貼文內容，並探索手動調整後的 ATI 變化。
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {data?.caseStudies?.map((cs) => (
-                  <button
-                    key={cs.brandId}
-                    onClick={() => {
-                      setSelectedCase(cs.brandId);
-                      setSelectedScenarioIdx(0);
-                    }}
-                    className={`
-                      text-sm font-medium px-3 py-2 rounded-lg border
-                      ${activeCase.brandId === cs.brandId
-                        ? 'border-[#AE9FD0] bg-[#F5F2F7] text-[#7A6B8F]'
-                        : 'border-gray-300 text-gray-600 hover:bg-gray-100'
-                      }
-                    `}
-                  >
-                    {formatBrandName(cs.brandName)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="p-5 grid gap-6 lg:grid-cols-2">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{formatBrandName(activeCase.brandName)}</p>
-                    <p className="text-xs text-gray-500">{activeCase.rationale}</p>
-                  </div>
-                  <span
-                    className={`
-                      text-xs font-semibold px-2 py-1 rounded-full
-                      ${activeCase.trapRanking === 'highest' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}
-                    `}
-                  >
-                    {activeCase.trapRanking === 'highest' ? '平均陷阱高' : '保持差異'}
-                  </span>
-                </div>
-                {activeCase.baseline.url ? (
-                  <a
-                    href={activeCase.baseline.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                  >
-                    {(() => {
-                      // 根據案例索引決定顯示的圖片
-                      const caseIndex = data?.caseStudies?.findIndex(cs => cs.brandId === activeCase?.brandId) ?? -1;
-                      const imagePath = caseIndex === 0 ? '/figs/fig1.png' : '/figs/fig2.png';
-                      return activeCase.baseline.imageUrl ? (
-                        <img
-                          src={activeCase.baseline.imageUrl}
-                          alt={activeCase.brandName}
-                          className="w-full h-48 object-cover"
-                        />
-                      ) : (
-                        <img
-                          src={imagePath}
-                          alt={activeCase.brandName}
-                          className="w-full h-48 object-cover"
-                        />
-                      );
-                    })()}
-                    <div className="p-4 space-y-2 text-sm text-gray-700">
-                      <p className="text-xs text-gray-500">{activeCase.baseline.date}</p>
-                      <p className="font-medium text-gray-900">{activeCase.baseline.captionSnippet}</p>
-                      <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-                        <span>ATI {activeCase.baseline.ati.toFixed(1)}</span>
-                        <span>Novelty {activeCase.baseline.novelty.toFixed(2)}</span>
-                        <span>Diversity {activeCase.baseline.diversity.toFixed(2)}</span>
-                        <span>❤️ {activeCase.baseline.likeCount}</span>
-                        <span>💬 {activeCase.baseline.commentCount}</span>
-                      </div>
-                      <p className="text-xs text-blue-600 mt-2">🔗 查看原始貼文</p>
-                    </div>
-                  </a>
-                ) : (
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    {(() => {
-                      // 根據案例索引決定顯示的圖片
-                      const caseIndex = data?.caseStudies?.findIndex(cs => cs.brandId === activeCase?.brandId) ?? -1;
-                      const imagePath = caseIndex === 0 ? '/figs/fig1.png' : '/figs/fig2.png';
-                      return activeCase.baseline.imageUrl ? (
-                        <img
-                          src={activeCase.baseline.imageUrl}
-                          alt={activeCase.brandName}
-                          className="w-full h-48 object-cover"
-                        />
-                      ) : (
-                        <img
-                          src={imagePath}
-                          alt={activeCase.brandName}
-                          className="w-full h-48 object-cover"
-                        />
-                      );
-                    })()}
-                    <div className="p-4 space-y-2 text-sm text-gray-700">
-                      <p className="text-xs text-gray-500">{activeCase.baseline.date}</p>
-                      <p className="font-medium text-gray-900">{activeCase.baseline.captionSnippet}</p>
-                      <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-                        <span>ATI {activeCase.baseline.ati.toFixed(1)}</span>
-                        <span>Novelty {activeCase.baseline.novelty.toFixed(2)}</span>
-                        <span>Diversity {activeCase.baseline.diversity.toFixed(2)}</span>
-                        <span>❤️ {activeCase.baseline.likeCount}</span>
-                        <span>💬 {activeCase.baseline.commentCount}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                {activeCase.scenarioTests[selectedScenarioIdx] && (
-                  <div className="border border-[#D4C9E0] bg-[#F5F2F7] rounded-lg p-4 space-y-3 text-sm text-[#5A4A6F]">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">
-                        {activeCase.scenarioTests[selectedScenarioIdx].title}
-                      </span>
-                      <span className="text-xs font-semibold bg-white text-[#8B7BA5] px-2 py-1 rounded-full border border-[#D4C9E0]">
-                        修改後 ATI {activeCase.scenarioTests[selectedScenarioIdx].adjustedAti.toFixed(1)}
-                      </span>
-                    </div>
-                    <p className="text-[#5A4A6F]">
-                      {activeCase.scenarioTests[selectedScenarioIdx].description}
-                    </p>
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold uppercase text-[#7A6B8F]">調整項目</p>
-                      <ul className="list-disc list-inside text-[#5A4A6F] space-y-1">
-                        {activeCase.scenarioTests[selectedScenarioIdx].changes.map((change) => (
-                          <li key={change}>{change}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    {/* 數值變化 */}
-                    <div className="pt-2 border-t border-[#D4C9E0]">
-                      <p className="text-xs font-semibold uppercase text-[#7A6B8F] mb-2">數值變化</p>
-                      <div className="space-y-1 text-xs text-[#5A4A6F]">
-                        {(() => {
-                          const scenario = activeCase.scenarioTests[selectedScenarioIdx];
-                          const atiChange = scenario.adjustedAti - activeCase.baseline.ati;
-                          const atiChangeText = atiChange > 0 ? '上升' : '下降';
-                          const noveltyChange = scenario.adjustedNovelty !== undefined 
-                            ? scenario.adjustedNovelty - activeCase.baseline.novelty 
-                            : null;
-                          const diversityChange = scenario.adjustedDiversity !== undefined 
-                            ? scenario.adjustedDiversity - activeCase.baseline.diversity 
-                            : null;
-                          
-                          return (
-                            <>
-                              <div>
-                                ATI {atiChangeText} {Math.abs(atiChange).toFixed(1)} 點（{activeCase.baseline.ati.toFixed(1)} → {scenario.adjustedAti.toFixed(1)}）
-                              </div>
-                              {noveltyChange !== null && (
-                                <div>
-                                  Novelty 變化 {noveltyChange > 0 ? '+' : ''}{noveltyChange.toFixed(2)}
-                                </div>
-                              )}
-                              {diversityChange !== null && (
-                                <div>
-                                  Diversity 變化 {diversityChange > 0 ? '+' : ''}{diversityChange.toFixed(2)}
-                                </div>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
-
 
         {/* 分箱（Decile）分析 */}
         <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">

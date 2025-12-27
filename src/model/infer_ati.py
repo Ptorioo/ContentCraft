@@ -87,7 +87,7 @@ def parse_rel_img_paths(cell):
     if ',' in s: return [x.strip() for x in s.split(',') if x.strip()]
     return [s]
 
-    reader = easyocr.Reader(['ch_tra','en'], gpu=False)
+reader = easyocr.Reader(['ch_tra','en'], gpu=False)
 
 def ocr_single_image(p):
     try: return " ".join([r.strip() for r in reader.readtext(p, detail=0, paragraph=True) if isinstance(r, str)])
@@ -298,12 +298,12 @@ def compute_ati_for_df(df: pd.DataFrame) -> pd.DataFrame:
     nov_image, div_image, DS_image = compute_DS_for_modality(image_vec, centers["image"], cfg["phase1"]["image"]["wN"], cfg["phase1"]["image"]["wD"], cfg["phase1"]["image"]["nov_min"], cfg["phase1"]["image"]["nov_max"], TAU)
 
     # 根據是否有圖片動態調整權重
-    # 如果有圖片：圖片8文字2 (v = [0.2, 0.8])
+    # 如果有圖片：圖片文字各50% (v = [0.5, 0.5])
     # 如果沒有圖片：文字1圖片0 (v = [1.0, 0.0])
     DS_final_list = []
     for i, has_img in enumerate(has_images):
         if has_img:
-            v = np.array([0.2, 0.8], dtype=np.float32)  # 文字2圖片8
+            v = np.array([0.5, 0.5], dtype=np.float32)  # 文字5圖片5
         else:
             v = np.array([1.0, 0.0], dtype=np.float32)  # 文字1圖片0
         ds_final = (v[0]*DS_text[i] + v[1]*DS_image[i]).astype(np.float32)

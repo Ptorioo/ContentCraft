@@ -85,7 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             className="flex-1 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 flex items-center space-x-2 hover:bg-gray-50 transition-colors text-left"
           >
             <Plus size={16} className="text-gray-600" />
-            <span className="text-gray-700 font-medium text-xs">新增貼文檢測</span>
+            <span className="text-gray-700 font-medium text-xs">新增貼文評估</span>
           </button>
           {showCollapseButton && onToggleCollapse && (
             <button

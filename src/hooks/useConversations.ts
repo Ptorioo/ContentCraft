@@ -39,7 +39,9 @@ export const useConversations = () => {
       content,
       isUser,
       timestamp: new Date(),
-      attachment
+      attachment,
+      originalUserContent: isUser ? content : undefined,
+      originalUserImage: isUser ? file : undefined, // 保存原始圖片文件，供 A/B Test 使用
     };
 
     setConversations(prev => prev.map(conv => {

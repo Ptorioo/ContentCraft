@@ -63,32 +63,36 @@ const ChatArea: React.FC<ChatAreaProps> = React.memo(({ messages, conversationTi
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto flex flex-col">
       {conversationTitle && (
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10 flex-shrink-0">
           <h2 className="text-lg font-semibold text-gray-900">{conversationTitle}</h2>
         </div>
       )}
       
-      <div className="divide-y divide-gray-200">
-        {messages.map((message) => (
-          <Message key={message.id} message={message} hideAnalysisResult={hideAnalysisResult} />
-        ))}
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="divide-y divide-gray-200 flex-1 flex flex-col">
+          {messages.map((message) => (
+            <Message key={message.id} message={message} hideAnalysisResult={hideAnalysisResult} />
+          ))}
 
-        {isLoading && (
-          <div className="flex items-center justify-start px-6 py-4">
-            <div className="flex items-center gap-3 bg-gray-100 rounded-2xl px-4 py-2">
-              <ThreeDots
-                height="24"
-                width="48"
-                color="#686868ff"
-                ariaLabel="loading"
-                visible
-              />
-              <span className="text-sm text-gray-600">分析中...</span>
+          {isLoading && (
+            <div className="flex items-center justify-start px-6 py-4">
+              <div className="flex items-center gap-3 bg-gray-100 rounded-2xl px-4 py-2">
+                <ThreeDots
+                  height="24"
+                  width="48"
+                  color="#686868ff"
+                  ariaLabel="loading"
+                  visible
+                />
+                <span className="text-sm text-gray-600">分析中...</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+          {/* 填充空白區域，讓結果貼在底部 */}
+          <div className="flex-1"></div>
+        </div>
       </div>
     </div>
   );
